@@ -395,27 +395,35 @@ MathJax = {
   <ol>
     <li><a href="#architecture">Network Architecture &amp; Notation</a></li>
     <li><a href="#foundations">Mathematical Foundations</a>
-      <ol style="margin-top:6px">
-        <li><a href="#sigmoid">Sigmoid Function &amp; Its Derivative</a></li>
-        <li><a href="#chain-rule">The Chain Rule</a></li>
-        <li><a href="#mse">MSE Loss Function &amp; Why Ordering Doesn't Matter</a></li>
-      </ol>
+      <ul style="margin-top:6px; padding-left:20px; list-style:none;">
+        <li><a href="#sigmoid">2.1 — Sigmoid Function &amp; Its Derivative (Full Proof)</a></li>
+        <li><a href="#chain-rule">2.2 — The Chain Rule of Calculus</a></li>
+        <li><a href="#mse">2.3 — MSE Loss Function</a></li>
+      </ul>
     </li>
     <li><a href="#forward">Forward Propagation</a></li>
     <li><a href="#backprop">Backpropagation — The Full Proof</a>
-      <ol style="margin-top:6px">
-        <li><a href="#delta2">Output Layer Error Signal δ²</a></li>
-        <li><a href="#gradW2">Gradients for W² — Subscript Convention</a></li>
-        <li><a href="#why-transpose">Why (W²)ᵀ Appears — The Matrix Chain Rule</a></li>
-        <li><a href="#gradZ1">Gradient of Loss w.r.t. Hidden Pre-Activation (Z¹)</a>
-          <ol style="margin-top:6px">
-            <li><a href="#jacobian">The Jacobian of A¹ w.r.t. Z¹</a></li>
-            <li><a href="#delta1">Combining via Chain Rule — δ¹</a></li>
-          </ol>
+      <ul style="margin-top:6px; padding-left:20px; list-style:none;">
+        <li><a href="#delta2">4.1 — Gradient of Loss w.r.t. A² (Output Activation)</a></li>
+        <li><a href="#gradW2">4.2 — Gradient of Loss w.r.t. Z² (Output Pre-Activation)</a>
+          <ul style="margin-top:6px; padding-left:20px; list-style:none;">
+            <li><a href="#gradW2">4.3 — Gradients for W² and b²</a></li>
+          </ul>
         </li>
-        <li><a href="#gradW1">Gradient of Loss w.r.t. Hidden Weights (W¹)</a></li>
-        <li><a href="#gradb1">Gradient of Loss w.r.t. Hidden Bias (b¹)</a></li>
-      </ol>
+        <li><a href="#why-transpose">4.4 — Propagating Error Back to the Hidden Layer</a></li>
+        <li><a href="#gradZ1">4.5 — Chain Rule Setup &amp; Jacobian of A¹ w.r.t. Z¹</a>
+          <ul style="margin-top:6px; padding-left:20px; list-style:none;">
+            <li><a href="#jacobian">4.5.1 — The Jacobian of A¹ w.r.t. Z¹</a></li>
+          </ul>
+        </li>
+        <li><a href="#delta1">4.6 — Gradient of Loss w.r.t. Hidden Pre-Activation (Z¹) — Computing δ¹</a>
+          <ul style="margin-top:6px; padding-left:20px; list-style:none;">
+            <li><a href="#delta1-detail">4.6.1 — Gradient of Loss w.r.t. Hidden Pre-Activation (Z¹) — Full Expansion</a></li>
+          </ul>
+        </li>
+        <li><a href="#gradW1">4.7 — Gradient of Loss w.r.t. Hidden Weights (W¹)</a></li>
+        <li><a href="#gradb1">4.8 — Gradient of Loss w.r.t. Hidden Bias (b¹)</a></li>
+      </ul>
     </li>
     <li><a href="#updates">Weight Update Equations</a></li>
     <li><a href="#numerical">Complete Numerical Example</a></li>
@@ -785,13 +793,13 @@ $$\frac{\partial L}{\partial \mathbf{A^1}} = (\mathbf{W^2})^T \cdot \delta^2 = \
 </div>
 </section>
 
-<!-- 4.5 Gradient of Loss w.r.t. Z1 — parent section -->
+<!-- 4.5 Chain Setup + Jacobian as tool -->
 <section id="gradZ1">
-<h3>4.5 — Gradient of Loss w.r.t. Hidden Pre-Activation (Z¹)</h3>
+<h3>4.5 — Chain Rule Setup &amp; Jacobian of A¹ w.r.t. Z¹</h3>
 
-<p>This is the central goal of the hidden layer backpropagation — computing $\frac{\partial L}{\partial \mathbf{Z^1}}$, also written as $\delta^1$. Once we have this, deriving the gradients for $\mathbf{W^1}$ and $\mathbf{b^1}$ becomes straightforward.</p>
+<p>Before computing the hidden layer gradient, we must identify the dependency chain and derive one intermediate tool — the Jacobian of $\mathbf{A^1}$ with respect to $\mathbf{Z^1}$. This Jacobian will be directly substituted in Section 4.6 to produce $\delta^1$.</p>
 
-<p>The full dependency chain from $L$ back to $\mathbf{Z^1}$ passes through two intermediate quantities we must account for:</p>
+<p>The full dependency chain from $L$ back to $\mathbf{Z^1}$ passes through two intermediate quantities:</p>
 
 <pre>L  ──▶  Z²  ──▶  A¹  ──▶  Z¹
 
@@ -879,7 +887,7 @@ $$\frac{\partial \mathbf{A^1}}{\partial \mathbf{Z^1}} = \begin{bmatrix} a^1_1(1-
 <section id="delta1">
 <h3>4.6 — Gradient of Loss w.r.t. Hidden Pre-Activation (Z¹) — Computing δ¹</h3>
 
-<p>We now have all the pieces needed. The complete chain rule flow for $\frac{\partial L}{\partial \mathbf{Z^1}}$ is:</p>
+<p>With the Jacobian derived in Section 4.5, we now substitute all known pieces into the chain rule to compute $\frac{\partial L}{\partial \mathbf{Z^1}} = \delta^1$ — the hidden layer error signal.</p>
 
 <pre>∂L/∂Z¹  =  (∂A¹/∂Z¹)ᵀ  ·  ∂L/∂A¹
          =  (∂A¹/∂Z¹)ᵀ  ·  (W²)ᵀ · δ²
