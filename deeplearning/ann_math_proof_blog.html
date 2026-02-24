@@ -405,11 +405,8 @@ MathJax = {
     <li><a href="#backprop">Backpropagation — The Full Proof</a>
       <ul style="margin-top:6px; padding-left:20px; list-style:none;">
         <li><a href="#delta2">4.1 — Gradient of Loss w.r.t. A² (Output Activation)</a></li>
-        <li><a href="#gradW2">4.2 — Gradient of Loss w.r.t. Z² (Output Pre-Activation)</a>
-          <ul style="margin-top:6px; padding-left:20px; list-style:none;">
-            <li><a href="#gradW2">4.3 — Gradients for W² and b²</a></li>
-          </ul>
-        </li>
+        <li><a href="#gradW2">4.2 — Gradient of Loss w.r.t. Z² (Output Pre-Activation)</a></li>
+        <li><a href="#gradW2">4.3 — Gradients for W² and b²</a></li>
         <li><a href="#why-transpose">4.4 — Propagating Error Back to the Hidden Layer</a></li>
         <li><a href="#gradZ1">4.5 — Chain Rule Setup &amp; Jacobian of A¹ w.r.t. Z¹</a>
           <ul style="margin-top:6px; padding-left:20px; list-style:none;">
@@ -1127,13 +1124,65 @@ Hidden layer (first row of W¹):
 
 <h3>The Mathematical Soul of a Neural Network</h3>
 
-<p>Strip everything away and what remains is a single composed function:</p>
+<p>Strip everything away and what remains is a single composed function. But where does this equation come from? It is not a new derivation — it is simply the entire forward pass written as one expression by substituting each layer's output directly into the next.</p>
 
+<h4>Step-by-Step Substitution</h4>
+
+<p>We start with the five separate forward pass equations we already know:</p>
+
+$$\mathbf{Z^1} = \mathbf{W^1}\mathbf{X} + \mathbf{b^1}$$
+$$\mathbf{A^1} = \sigma(\mathbf{Z^1})$$
+$$Z^2 = \mathbf{W^2}\mathbf{A^1} + b^2$$
+$$\hat{y} = \sigma(Z^2)$$
+$$L = \frac{1}{2}(y - \hat{y})^2$$
+
+<p>Now we eliminate all intermediate variables by substituting each equation into the next, working from the inside out.</p>
+
+<p><span class="step-num">Step 1</span> Substitute $\mathbf{Z^1}$ into $\mathbf{A^1}$:</p>
+
+$$\mathbf{A^1} = \sigma(\mathbf{Z^1}) = \sigma(\mathbf{W^1}\mathbf{X} + \mathbf{b^1})$$
+
+<p><span class="step-num">Step 2</span> Substitute that $\mathbf{A^1}$ into $Z^2$:</p>
+
+$$Z^2 = \mathbf{W^2} \cdot \mathbf{A^1} + b^2 = \mathbf{W^2} \cdot \sigma(\mathbf{W^1}\mathbf{X} + \mathbf{b^1}) + b^2$$
+
+<p><span class="step-num">Step 3</span> Substitute that $Z^2$ into $\hat{y}$:</p>
+
+$$\hat{y} = \sigma(Z^2) = \sigma\Big(\mathbf{W^2} \cdot \sigma(\mathbf{W^1}\mathbf{X} + \mathbf{b^1}) + b^2\Big)$$
+
+<p><span class="step-num">Step 4</span> Substitute that $\hat{y}$ into $L$:</p>
+
+<div class="boxed">
 $$L = \frac{1}{2}\left(y - \sigma\left(\mathbf{W^2}\cdot\sigma\left(\mathbf{W^1}\mathbf{X}+\mathbf{b^1}\right)+b^2\right)\right)^2$$
+</div>
 
-<p>Backpropagation is systematic differentiation of this composition — layer by layer, outside to inside — using the chain rule. The sigmoid's self-referential derivative makes it computationally efficient, the matrix chain rule naturally produces the transpose, and the diagonal Jacobian collapses to simple element-wise multiplication.</p>
+<p>Nothing new was derived — this is purely mechanical substitution, collapsing five equations into one by removing all intermediate variables.</p>
 
-<p>Everything else — the architecture, the notation, the numerical example — is just making sure we apply these three ideas correctly, at the right dimensions, in the right order.</p>
+<h4>Why It Is Written This Way</h4>
+
+<p>Writing the network as a single composed function makes one point visually clear — a neural network is just a function nested inside another function nested inside another function. In mathematics this is called a <strong>composition of functions</strong>:</p>
+
+$$L = f_5\Big(f_4\Big(f_3\Big(f_2\Big(f_1(\mathbf{X})\Big)\Big)\Big)\Big)$$
+
+<p>Where each $f$ maps to one operation in the forward pass:</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Function</th><th>Operation</th><th>What it computes</th></tr></thead>
+  <tbody>
+    <tr><td>$f_1(\mathbf{X})$</td><td>$\mathbf{W^1}\mathbf{X} + \mathbf{b^1}$</td><td>Hidden pre-activation $\mathbf{Z^1}$</td></tr>
+    <tr><td>$f_2(\mathbf{Z^1})$</td><td>$\sigma(\mathbf{Z^1})$</td><td>Hidden activation $\mathbf{A^1}$</td></tr>
+    <tr><td>$f_3(\mathbf{A^1})$</td><td>$\mathbf{W^2}\mathbf{A^1} + b^2$</td><td>Output pre-activation $Z^2$</td></tr>
+    <tr><td>$f_4(Z^2)$</td><td>$\sigma(Z^2)$</td><td>Prediction $\hat{y}$</td></tr>
+    <tr><td>$f_5(\hat{y})$</td><td>$\frac{1}{2}(y - \hat{y})^2$</td><td>Loss $L$</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="intuition">
+  <strong>Backpropagation is just differentiating this composition.</strong> The chain rule was designed exactly for this — differentiating a function nested inside another function. Backpropagation systematically applies the chain rule layer by layer, outside to inside, unwinding the composition in reverse. The composed form makes that connection visually obvious: the deeper a layer is nested, the further the gradient must travel back through the chain.
+</div>
+
 </section>
 
 </article>
