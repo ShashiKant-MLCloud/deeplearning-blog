@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Beyond the Basics — Activation Functions, Loss Functions &amp; Softmax</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$','$'],['\\(','\\)']],
+    displayMath: [['$$','$$'],['\\[','\\]']],
+    tags: 'none'
+  },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg:         #ffffff;
+  --bg2:        #f9f9f9;
+  --bg3:        #f3f4f6;
+  --border:     #e5e7eb;
+  --text:       #1f2937;
+  --text-soft:  #4b5563;
+  --text-muted: #9ca3af;
+  --amber:      #b45309;
+  --amber-dim:  #fef3c7;
+  --teal:       #0d9488;
+  --teal-dim:   #f0fdfa;
+  --rose:       #dc2626;
+  --rose-dim:   #fef2f2;
+  --violet:     #7c3aed;
+  --violet-dim: #f5f3ff;
+  --green:      #16a34a;
+  --green-dim:  #f0fdf4;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --display: 'Playfair Display', Georgia, serif;
+  --max-w: 800px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--serif);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.85;
+  font-size: 18px;
+}
+
+/* ── Top accent bar ── */
+body::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--amber), var(--teal), var(--violet));
+}
+
+article {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 64px 24px 120px;
+}
+
+/* ── Header ── */
+header { margin-bottom: 60px; }
+
+.series-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amber);
+  display: block;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-family: var(--display);
+  font-size: clamp(30px, 5.5vw, 52px);
+  font-weight: 900;
+  line-height: 1.15;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--amber);
+}
+
+.subtitle {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 300;
+  color: var(--text-soft);
+  line-height: 1.65;
+  margin: 18px 0 28px;
+  border-left: 2px solid var(--border);
+  padding-left: 18px;
+}
+
+.meta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.meta span { color: var(--text-muted); }
+.meta span::before { content: '▸ '; color: var(--amber); }
+
+/* ── TOC ── */
+.toc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--amber);
+  padding: 28px 32px;
+  margin: 44px 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.toc-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 16px;
+  display: block;
+}
+
+.toc ol { padding-left: 0; list-style: none; counter-reset: toc-main; }
+.toc > ol > li { counter-increment: toc-main; margin: 8px 0; }
+.toc > ol > li::before {
+  content: counter(toc-main) '. ';
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.toc ul { list-style: none; padding-left: 22px; margin-top: 6px; }
+.toc ul li { margin: 5px 0; }
+.toc ul li::before { content: '— '; color: var(--text-muted); font-family: var(--mono); font-size: 11px; }
+
+.toc a {
+  color: var(--text-soft);
+  text-decoration: none;
+  font-family: var(--serif);
+  font-size: 15px;
+  transition: color 0.2s;
+}
+.toc a:hover { color: var(--amber); }
+
+/* ── Part dividers ── */
+.part-divider {
+  margin: 72px 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.part-divider .part-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: var(--amber);
+  padding: 4px 12px;
+  border-radius: 2px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.part-divider .part-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--amber-dim), transparent);
+}
+
+/* ── Headings ── */
+h2 {
+  font-family: var(--display);
+  font-size: clamp(22px, 3.5vw, 32px);
+  font-weight: 700;
+  color: #111827;
+  margin: 52px 0 18px;
+  line-height: 1.25;
+}
+
+h3 {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 38px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin: 28px 0 10px;
+}
+
+p { margin-bottom: 18px; color: var(--text); }
+p:last-child { margin-bottom: 0; }
+
+strong { color: #111827; font-weight: 600; }
+em { color: var(--amber); font-style: italic; }
+
+/* ── Boxed result ── */
+.boxed {
+  background: var(--bg3);
+  border: 1px solid var(--amber-dim);
+  border-left: 3px solid var(--amber);
+  border-radius: 0 6px 6px 0;
+  padding: 18px 24px;
+  margin: 24px 0;
+  overflow-x: auto;
+}
+
+/* ── Key result (golden) ── */
+.key-result {
+  background: #fffbeb;
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  padding: 22px 28px;
+  margin: 28px 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+.key-result::before {
+  content: 'KEY RESULT';
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  position: absolute;
+  top: 10px;
+  right: 14px;
+}
+
+/* ── Insight block ── */
+.insight {
+  background: var(--teal-dim);
+  border-left: 3px solid var(--teal);
+  border-radius: 0 6px 6px 0;
+  padding: 16px 22px;
+  margin: 24px 0;
+  font-size: 0.95em;
+  color: #134e4a;
+}
+
+.insight strong { color: var(--teal); }
+
+/* ── Warning block ── */
+.warning {
+  background: var(--rose-dim);
+  border-left: 3px solid var(--rose);
+  border-radius: 0 6px 6px 0;
+  padding: 16px 22px;
+  margin: 24px 0;
+  font-size: 0.95em;
+  color: #7f1d1d;
+}
+
+.warning strong { color: var(--rose); }
+
+/* ── Note block ── */
+.note {
+  background: var(--violet-dim);
+  border-left: 3px solid var(--violet);
+  border-radius: 0 6px 6px 0;
+  padding: 16px 22px;
+  margin: 24px 0;
+  font-size: 0.95em;
+  color: #4c1d95;
+}
+
+.note strong { color: var(--violet); }
+
+/* ── Code / pre ── */
+pre {
+  background: #f8f9fa;
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.75;
+  padding: 22px 26px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 24px 0;
+  color: #374151;
+}
+
+.pre-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 6px 16px;
+  border-radius: 4px 4px 0 0;
+  display: inline-block;
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; margin: 28px 0; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--serif);
+  font-size: 15px;
+}
+
+thead tr { background: var(--bg3); border-bottom: 1px solid var(--amber-dim); }
+
+th {
+  padding: 12px 16px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg2); }
+
+/* ── Activation visual ── */
+.activation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 28px 0;
+}
+
+.act-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+
+.act-card:hover { border-color: #d97706; }
+
+.act-card .act-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  margin-bottom: 8px;
+}
+
+.act-card .act-formula {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+
+.act-card .act-range {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.act-card .act-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+.tag-good { background: var(--green-dim); color: #166534; }
+.tag-warn { background: var(--rose-dim); color: #991b1b; }
+.tag-use  { background: var(--violet-dim); color: #5b21b6; }
+
+/* ── Step label ── */
+.step {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: var(--amber);
+  color: #000;
+  padding: 2px 9px;
+  border-radius: 20px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* ── Comparison block ── */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.compare-cell {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 20px;
+}
+
+.compare-cell .compare-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.compare-cell.good { border-top: 2px solid var(--green); }
+.compare-cell.good .compare-title { color: var(--green); }
+.compare-cell.bad  { border-top: 2px solid var(--rose); }
+.compare-cell.bad .compare-title  { color: var(--rose); }
+
+/* ── HR ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 52px 0; }
+
+/* ── Reference sheet ── */
+.refsheet {
+  background: #f8f9fa;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px 36px;
+  margin: 40px 0;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 2;
+}
+
+.refsheet .rs-section { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 18px; }
+.refsheet .rs-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.refsheet .rs-title { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--amber); margin-bottom: 12px; }
+.refsheet .eq { color: #1d4ed8; }
+.refsheet .cm { color: var(--text-muted); font-style: italic; }
+
+/* ── Responsive ── */
+@media(max-width:600px) {
+  body { font-size: 16px; }
+  article { padding: 32px 16px 80px; }
+  .compare { grid-template-columns: 1fr; }
+  .activation-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<article>
+
+<!-- ════════════════════ HEADER ════════════════════ -->
+<header>
+  <span class="series-label">ANN Deep Dive · Part 2</span>
+  <h1>Beyond the <em>Basics</em></h1>
+  <p class="subtitle">
+    A rigorous mathematical treatment of activation functions beyond Sigmoid,
+    loss functions beyond MSE, and the Softmax output layer — with full derivations,
+    gradients, and the design reasoning behind every choice.
+  </p>
+  <div class="meta">
+    <span>Activation Functions</span>
+    <span>Loss Functions</span>
+    <span>Softmax</span>
+    <span>Gradient Derivations</span>
+  </div>
+</header>
+
+<!-- ════════════════════ TOC ════════════════════ -->
+<nav class="toc">
+  <span class="toc-title">Contents</span>
+  <ol>
+    <li><a href="#part1">Activation Functions Beyond Sigmoid</a>
+      <ul>
+        <li><a href="#why-not-sigmoid">Why Sigmoid Fails in Hidden Layers</a></li>
+        <li><a href="#tanh">Tanh</a></li>
+        <li><a href="#relu">ReLU — Rectified Linear Unit</a></li>
+        <li><a href="#leaky-relu">Leaky ReLU</a></li>
+        <li><a href="#elu">ELU — Exponential Linear Unit</a></li>
+        <li><a href="#gelu">GELU — Gaussian Error Linear Unit</a></li>
+        <li><a href="#activation-comparison">Complete Comparison Table</a></li>
+        <li><a href="#activation-decision">Decision Framework</a></li>
+      </ul>
+    </li>
+    <li><a href="#part2">Loss Functions Beyond MSE</a>
+      <ul>
+        <li><a href="#why-not-mse">Why MSE Fails for Classification</a></li>
+        <li><a href="#info-theory">Information Theory Foundation</a></li>
+        <li><a href="#bce">Binary Cross-Entropy</a></li>
+        <li><a href="#bce-gradient">BCE Gradient &amp; The Magic Cancellation</a></li>
+        <li><a href="#loss-comparison">MSE vs BCE Comparison</a></li>
+        <li><a href="#loss-decision">Matched Pairs — Activation + Loss</a></li>
+      </ul>
+    </li>
+    <li><a href="#part3">Softmax Output Layer</a>
+      <ul>
+        <li><a href="#softmax-definition">Definition &amp; Properties</a></li>
+        <li><a href="#softmax-jacobian">The Softmax Jacobian</a></li>
+        <li><a href="#cce">Categorical Cross-Entropy</a></li>
+        <li><a href="#cce-gradient">CCE + Softmax Gradient — Full Derivation</a></li>
+        <li><a href="#numerical-softmax">Numerical Example</a></li>
+      </ul>
+    </li>
+    <li><a href="#part4">The Unified Pattern</a></li>
+    <li><a href="#part5">Weight Initialization</a>
+      <ul>
+        <li><a href="#why-init-matters">Why Initialization Matters</a></li>
+        <li><a href="#init-options">Initialization Options</a></li>
+        <li><a href="#init-summary">Decision Summary</a></li>
+      </ul>
+    </li>
+    <li><a href="#part6">Optimizers Beyond Gradient Descent</a>
+      <ul>
+        <li><a href="#sgd-problems">Problems With Vanilla Gradient Descent</a></li>
+        <li><a href="#momentum">Momentum</a></li>
+        <li><a href="#adagrad">AdaGrad</a></li>
+        <li><a href="#rmsprop">RMSProp</a></li>
+        <li><a href="#adam">Adam &amp; AdamW</a></li>
+        <li><a href="#optimizer-summary">Optimizer Comparison</a></li>
+      </ul>
+    </li>
+    <li><a href="#part7">L1 and L2 Regularization</a>
+      <ul>
+        <li><a href="#the-idea">The Core Idea — Penalizing the Loss</a></li>
+        <li><a href="#l2">L2 Regularization — Ridge</a></li>
+        <li><a href="#l1">L1 Regularization — Lasso</a></li>
+        <li><a href="#l1-vs-l2">L1 vs L2 — The Key Difference</a></li>
+        <li><a href="#lambda-choice">Choosing λ</a></li>
+      </ul>
+    </li>
+    <li><a href="#refsheet">Quick Reference Sheet</a></li>
+  </ol>
+</nav>
+
+<!-- ════════════════════ PART 1 ════════════════════ -->
+<div class="part-divider" id="part1">
+  <span class="part-num">Part 1</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>Activation Functions Beyond Sigmoid</h2>
+
+<p>In Part 1 of this series we used Sigmoid as the activation function throughout the entire network. This is mathematically clean for teaching but problematic in practice. Before introducing alternatives, we need to understand precisely <em>why</em> Sigmoid fails in hidden layers.</p>
+
+<!-- Why not sigmoid -->
+<section id="why-not-sigmoid">
+<h3>Why Sigmoid Fails in Hidden Layers</h3>
+
+<p>Recall the sigmoid derivative we proved in Part 1:</p>
+
+$$\sigma'(z) = \sigma(z)(1 - \sigma(z))$$
+
+<p>Its maximum value occurs at $z = 0$:</p>
+
+$$\sigma'(0) = 0.5 \times 0.5 = 0.25$$
+
+<p>For any other input, the derivative is strictly less than 0.25. In a deep network with $L$ hidden layers, the gradient flowing back to the earliest layer is proportional to:</p>
+
+$$\frac{\partial L}{\partial \mathbf{W^1}} \propto \prod_{l=1}^{L} \sigma'(Z^l) \leq (0.25)^L$$
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Layers</th><th>Max gradient (best case)</th><th>Practical reality</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>$0.25^1 = 0.250$</td><td>Acceptable</td></tr>
+    <tr><td>3</td><td>$0.25^3 = 0.016$</td><td>Weak</td></tr>
+    <tr><td>5</td><td>$0.25^5 = 0.001$</td><td>Near zero</td></tr>
+    <tr><td>10</td><td>$0.25^{10} \approx 10^{-6}$</td><td>Effectively dead</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="warning">
+  <strong>The Vanishing Gradient Problem:</strong> Early layers receive gradients so close to zero that their weights barely update. The network's ability to learn complex representations — which depends on early layers — is severely compromised. This is why deep networks with sigmoid activations were largely untrainable before 2010.
+</div>
+
+<p>Each alternative activation below addresses this problem in a different way.</p>
+</section>
+
+<!-- TANH -->
+<section id="tanh">
+<h3>Tanh — Hyperbolic Tangent</h3>
+
+<h4>Definition</h4>
+
+$$\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}$$
+
+<p>Equivalently, tanh is a scaled and shifted version of sigmoid:</p>
+
+$$\tanh(z) = 2\sigma(2z) - 1$$
+
+<h4>Derivative of Tanh — Full Proof</h4>
+
+<p><span class="step">Step 1</span> Write as a quotient $f/g$ where $f = e^z - e^{-z}$ and $g = e^z + e^{-z}$:</p>
+
+$$\tanh'(z) = \frac{f'g - fg'}{g^2}$$
+
+<p><span class="step">Step 2</span> Compute each part:</p>
+
+$$f' = e^z + e^{-z} = g \quad\quad g' = e^z - e^{-z} = f$$
+
+<p><span class="step">Step 3</span> Substitute:</p>
+
+$$\tanh'(z) = \frac{g \cdot g - f \cdot f}{g^2} = \frac{g^2 - f^2}{g^2} = 1 - \frac{f^2}{g^2} = 1 - \tanh^2(z)$$
+
+<div class="key-result">
+$$\tanh'(z) = 1 - \tanh^2(z)$$
+</div>
+
+<p>Like sigmoid, the derivative is expressed in terms of the function itself — whatever was computed in the forward pass is reused. The maximum derivative occurs at $z = 0$:</p>
+
+$$\tanh'(0) = 1 - 0^2 = 1$$
+
+<p>This is <strong>4 times larger</strong> than sigmoid's maximum of 0.25. The vanishing gradient problem is reduced but not eliminated — tanh still saturates at $\pm 1$ for large $|z|$.</p>
+
+<div class="insight">
+  <strong>Zero-centered advantage:</strong> Tanh outputs values in $(-1, +1)$, centered around zero. Sigmoid outputs in $(0, 1)$, always positive. When all activations are positive, weight gradients in the same layer always have the same sign, forcing zig-zag updates that slow convergence. Tanh's zero-centering avoids this.
+</div>
+</section>
+
+<!-- RELU -->
+<section id="relu">
+<h3>ReLU — Rectified Linear Unit</h3>
+
+<h4>Definition</h4>
+
+$$\text{ReLU}(z) = \max(0, z) = \begin{cases} z & z > 0 \\ 0 & z \leq 0 \end{cases}$$
+
+<h4>Derivative</h4>
+
+$$\text{ReLU}'(z) = \begin{cases} 1 & z > 0 \\ 0 & z \leq 0 \end{cases}$$
+
+<p>The derivative at exactly $z = 0$ is technically undefined (the function has a kink), but in practice is set to either 0 or 1 — this edge case occurs with probability zero during training and has no practical impact.</p>
+
+<h4>Why ReLU Solves the Vanishing Gradient</h4>
+
+<p>For any active neuron ($z > 0$), the derivative is exactly <strong>1</strong>. The gradient product across $L$ active layers becomes:</p>
+
+$$\prod_{l=1}^{L} \text{ReLU}'(Z^l) = 1 \times 1 \times \cdots \times 1 = 1$$
+
+<p>The gradient passes through active neurons completely unchanged in magnitude, regardless of network depth. This is what made training very deep networks practical.</p>
+
+<div class="compare">
+  <div class="compare-cell good">
+    <div class="compare-title">Advantages</div>
+    <p style="font-size:14px; margin:0;">Gradient = 1 for active neurons — no vanishing. Computationally trivial: just $\max(0, z)$. Sparse activations (~50% neurons inactive) act as natural regularization.</p>
+  </div>
+  <div class="compare-cell bad">
+    <div class="compare-title">Dying ReLU Problem</div>
+    <p style="font-size:14px; margin:0;">If $z \leq 0$ for all training samples — caused by a large negative bias or bad weight update — gradient = 0 permanently. The neuron never recovers. A large learning rate can kill many neurons simultaneously.</p>
+  </div>
+</div>
+</section>
+
+<!-- LEAKY RELU -->
+<section id="leaky-relu">
+<h3>Leaky ReLU</h3>
+
+<h4>Definition</h4>
+
+$$\text{LeakyReLU}(z) = \begin{cases} z & z > 0 \\ \alpha z & z \leq 0 \end{cases}$$
+
+<p>where $\alpha$ is a small constant, typically $\alpha = 0.01$.</p>
+
+<h4>Derivative</h4>
+
+$$\text{LeakyReLU}'(z) = \begin{cases} 1 & z > 0 \\ \alpha & z \leq 0 \end{cases}$$
+
+<p>The derivative for negative inputs is now $\alpha = 0.01$ instead of 0. This small but non-zero gradient allows neurons that fall into the negative zone to still receive a gradient signal and potentially recover.</p>
+
+<div class="insight">
+  <strong>Why $\alpha = 0.01$ specifically?</strong> It is small enough that negative-zone neurons do not dominate the gradient (they shouldn't — they were inactive for a reason), but large enough to prevent permanent death. The exact value is a hyperparameter; some implementations learn it during training (Parametric ReLU).
+</div>
+</section>
+
+<!-- ELU -->
+<section id="elu">
+<h3>ELU — Exponential Linear Unit</h3>
+
+<h4>Definition</h4>
+
+$$\text{ELU}(z) = \begin{cases} z & z > 0 \\ \alpha(e^z - 1) & z \leq 0 \end{cases}$$
+
+<p>where $\alpha > 0$, typically $\alpha = 1.0$.</p>
+
+<h4>Derivative</h4>
+
+$$\text{ELU}'(z) = \begin{cases} 1 & z > 0 \\ \alpha e^z & z \leq 0 \end{cases}$$
+
+<p>Note that for $z \leq 0$: $\text{ELU}(z) + \alpha = \alpha e^z$, so the derivative can also be written as $\text{ELU}(z) + \alpha$ — reusing the forward pass value, just like sigmoid and tanh.</p>
+
+<h4>Key Properties</h4>
+
+<p><strong>Smooth at zero.</strong> Unlike ReLU and Leaky ReLU which have a sharp kink at $z = 0$, ELU is differentiable everywhere. At $z = 0$: $\text{ELU}(0) = \alpha(e^0 - 1) = 0$ (continuous) and $\text{ELU}'(0^-) = \alpha e^0 = \alpha = 1$ when $\alpha = 1$ (smooth).</p>
+
+<p><strong>Negative saturation.</strong> As $z \to -\infty$, $\text{ELU}(z) \to -\alpha$. Mean activations are pushed closer to zero, which stabilizes training similarly to batch normalization.</p>
+</section>
+
+<!-- GELU -->
+<section id="gelu">
+<h3>GELU — Gaussian Error Linear Unit</h3>
+
+<h4>Definition</h4>
+
+$$\text{GELU}(z) = z \cdot \Phi(z) = z \cdot \frac{1}{2}\left[1 + \text{erf}\left(\frac{z}{\sqrt{2}}\right)\right]$$
+
+<p>where $\Phi(z)$ is the cumulative distribution function (CDF) of the standard normal distribution, and $\text{erf}$ is the Gaussian error function.</p>
+
+<h4>Practical Approximation</h4>
+
+<p>The exact form involves the error function which is expensive to compute. In practice, the following approximation is used:</p>
+
+$$\text{GELU}(z) \approx 0.5z\left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}\left(z + 0.044715z^3\right)\right]\right)$$
+
+<h4>What Does It Mean Probabilistically?</h4>
+
+<p>$\text{GELU}(z) = z \cdot \Phi(z)$ can be read as: the input $z$ is multiplied by the probability that a standard normal random variable is less than $z$. Intuitively, inputs that are very likely to be above zero (large positive $z$, $\Phi(z) \approx 1$) pass through fully. Inputs unlikely to be above zero (large negative $z$, $\Phi(z) \approx 0$) are suppressed. This is a smooth, probabilistic gating.</p>
+
+<div class="insight">
+  <strong>Where GELU is used:</strong> GPT-2, GPT-3, BERT, and most modern transformer architectures use GELU in their feed-forward layers. It empirically outperforms ReLU on these architectures, likely because its smooth non-linearity is better suited to the attention-based representations these networks learn.
+</div>
+</section>
+
+<!-- Comparison table -->
+<section id="activation-comparison">
+<h3>Complete Comparison</h3>
+
+<div class="activation-grid">
+  <div class="act-card">
+    <div class="act-name">Sigmoid</div>
+    <div class="act-formula">$\frac{1}{1+e^{-z}}$</div>
+    <div class="act-range">Range: (0, 1) · Max derivative: 0.25</div>
+    <span class="act-tag tag-warn">Vanishing gradient</span>
+    <span class="act-tag tag-use" style="margin-left:4px">Output only</span>
+  </div>
+  <div class="act-card">
+    <div class="act-name">Tanh</div>
+    <div class="act-formula">$\frac{e^z - e^{-z}}{e^z + e^{-z}}$</div>
+    <div class="act-range">Range: (-1, 1) · Max derivative: 1.0</div>
+    <span class="act-tag tag-good">Zero-centered</span>
+    <span class="act-tag tag-warn" style="margin-left:4px">Still saturates</span>
+  </div>
+  <div class="act-card">
+    <div class="act-name">ReLU</div>
+    <div class="act-formula">$\max(0, z)$</div>
+    <div class="act-range">Range: [0, ∞) · Derivative: 0 or 1</div>
+    <span class="act-tag tag-good">No vanishing</span>
+    <span class="act-tag tag-warn" style="margin-left:4px">Dying neurons</span>
+  </div>
+  <div class="act-card">
+    <div class="act-name">Leaky ReLU</div>
+    <div class="act-formula">$\max(\alpha z, z)$, $\alpha{=}0.01$</div>
+    <div class="act-range">Range: (-∞, ∞) · Derivative: α or 1</div>
+    <span class="act-tag tag-good">No dying neurons</span>
+  </div>
+  <div class="act-card">
+    <div class="act-name">ELU</div>
+    <div class="act-formula">$z$ if $z{>}0$, else $\alpha(e^z{-}1)$</div>
+    <div class="act-range">Range: (-α, ∞) · Smooth at 0</div>
+    <span class="act-tag tag-good">Smooth</span>
+    <span class="act-tag tag-good" style="margin-left:4px">Zero-mean</span>
+  </div>
+  <div class="act-card">
+    <div class="act-name">GELU</div>
+    <div class="act-formula">$z \cdot \Phi(z)$</div>
+    <div class="act-range">Range: (~-0.17, ∞) · Smooth</div>
+    <span class="act-tag tag-use">Transformers</span>
+    <span class="act-tag tag-good" style="margin-left:4px">SOTA</span>
+  </div>
+</div>
+</section>
+
+<!-- Decision framework -->
+<section id="activation-decision">
+<h3>Decision Framework</h3>
+
+<pre>What kind of network are you building?
+  │
+  ├── Output layer?
+  │     ├── Binary classification (0 or 1)     → Sigmoid
+  │     ├── Multi-class classification          → Softmax (see Part 3)
+  │     └── Regression (unbounded value)        → Linear (no activation)
+  │
+  └── Hidden layers?
+        ├── Default (most networks)             → ReLU
+        ├── Neurons dying / unstable training   → Leaky ReLU or ELU
+        ├── Transformer / LLM architecture      → GELU
+        └── Very small network / small data     → Tanh acceptable
+                                          
+Rule: NEVER use Sigmoid in hidden layers of deep networks.</pre>
+</section>
+
+<!-- ════════════════════ PART 2 ════════════════════ -->
+<div class="part-divider" id="part2">
+  <span class="part-num">Part 2</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>Loss Functions Beyond MSE</h2>
+
+<p>In Part 1, we used Mean Squared Error (MSE) as the loss function and derived its gradient fully. MSE is the natural choice for regression — predicting continuous values. But applying it to classification problems creates two serious issues.</p>
+
+<!-- Why not MSE -->
+<section id="why-not-mse">
+<h3>Why MSE Fails for Classification</h3>
+
+<p><strong>Problem 1 — MSE punishes errors geometrically, not probabilistically.</strong> When the output is a probability $\hat{y} \in (0,1)$, the squared difference $(y - \hat{y})^2$ treats all equal-distance errors equally. Being wrong with high confidence ($\hat{y} = 0.01$ when $y = 1$) should be punished catastrophically. MSE only penalizes it by $(1 - 0.01)^2 = 0.980$. Being mildly uncertain ($\hat{y} = 0.4$ when $y = 1$) is penalized $(1 - 0.4)^2 = 0.360$. The confident wrong prediction gets only 2.7× more penalty despite being far more consequential.</p>
+
+<p><strong>Problem 2 — MSE reintroduces vanishing gradients at the output.</strong> Recall from Part 1, the output gradient with MSE + sigmoid:</p>
+
+$$\delta^2 = (\hat{y} - y) \cdot \hat{y}(1 - \hat{y})$$
+
+<p>When the network is very confident but wrong — say $\hat{y} = 0.01$, $y = 1$:</p>
+
+$$\delta^2 = (0.01 - 1) \cdot 0.01 \cdot 0.99 = -0.99 \times 0.0099 = -0.0098$$
+
+<p>The error signal $(\hat{y} - y) = -0.99$ is large, but the sigmoid derivative $\hat{y}(1-\hat{y}) = 0.0099$ kills it. The network barely corrects its worst mistakes — precisely the behavior we do not want.</p>
+</section>
+
+<!-- Information theory -->
+<section id="info-theory">
+<h3>Information Theory Foundation</h3>
+
+<p>Cross-entropy loss emerges naturally from information theory, not from arbitrary design choices.</p>
+
+<p><strong>Entropy</strong> measures the average surprise or uncertainty in a probability distribution $p$:</p>
+
+$$H(p) = -\sum_i p_i \log(p_i)$$
+
+<p>The term $-\log(p_i)$ is the <em>information content</em> of event $i$ — rare events ($p_i \approx 0$) carry high information ($-\log(p_i) \to \infty$); certain events carry no information ($-\log(1) = 0$).</p>
+
+<p><strong>Cross-entropy</strong> measures how well a predicted distribution $\hat{y}$ approximates the true distribution $y$:</p>
+
+$$H(y, \hat{y}) = -\sum_i y_i \log(\hat{y}_i)$$
+
+<div class="insight">
+  <strong>Minimizing cross-entropy</strong> is equivalent to finding the predicted distribution $\hat{y}$ that most closely matches the true distribution $y$ — which is the correct objective for any classification task. MSE has no such probabilistic grounding.
+</div>
+</section>
+
+<!-- BCE -->
+<section id="bce">
+<h3>Binary Cross-Entropy (BCE)</h3>
+
+<p>Used when: <strong>binary classification</strong> — two classes, one output neuron, sigmoid activation.</p>
+
+<h4>Definition</h4>
+
+<p>For a single training example with true label $y \in \{0, 1\}$ and prediction $\hat{y} \in (0, 1)$:</p>
+
+<div class="key-result">
+$$L_{BCE} = -\left[y\log(\hat{y}) + (1-y)\log(1-\hat{y})\right]$$
+</div>
+
+<h4>Understanding the Two Terms</h4>
+
+<p>This is two cases collapsed into one equation using the indicator $y \in \{0,1\}$.</p>
+
+<p><strong>When $y = 1$:</strong> $(1-y) = 0$, so the second term vanishes:</p>
+$$L = -\log(\hat{y})$$
+<p>As $\hat{y} \to 1$ (correct, confident): $-\log(1) = 0$ — no loss. As $\hat{y} \to 0$ (wrong, confident): $-\log(0) \to \infty$ — catastrophic loss.</p>
+
+<p><strong>When $y = 0$:</strong> $y = 0$, so the first term vanishes:</p>
+$$L = -\log(1-\hat{y})$$
+<p>As $\hat{y} \to 0$ (correct, confident): $-\log(1) = 0$. As $\hat{y} \to 1$ (wrong, confident): $-\log(0) \to \infty$.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>y</th><th>ŷ</th><th>MSE Loss</th><th>BCE Loss</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>0.99</td><td>0.00005</td><td>0.010</td><td>Correct &amp; confident</td></tr>
+    <tr><td>1</td><td>0.70</td><td>0.045</td><td>0.357</td><td>Correct but uncertain</td></tr>
+    <tr><td>1</td><td>0.30</td><td>0.245</td><td>1.204</td><td>Wrong, uncertain</td></tr>
+    <tr><td>1</td><td>0.01</td><td>0.980</td><td><strong>4.605</strong></td><td>Wrong &amp; confident → BCE explodes</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>BCE punishes confident wrong predictions <em>exponentially</em> harder — this is the correct behavior for probabilistic outputs.</p>
+</section>
+
+<!-- BCE gradient -->
+<section id="bce-gradient">
+<h3>BCE Gradient &amp; The Magic Cancellation</h3>
+
+<h4>Step 1 — Gradient of BCE w.r.t. ŷ</h4>
+
+$$\frac{\partial L_{BCE}}{\partial \hat{y}} = \frac{\partial}{\partial \hat{y}}\left[-y\log(\hat{y}) - (1-y)\log(1-\hat{y})\right]$$
+
+<p>Differentiating term by term using $\frac{d}{dx}\log(x) = \frac{1}{x}$:</p>
+
+$$\frac{\partial}{\partial \hat{y}}\left[-y\log(\hat{y})\right] = -\frac{y}{\hat{y}}$$
+
+$$\frac{\partial}{\partial \hat{y}}\left[-(1-y)\log(1-\hat{y})\right] = \frac{1-y}{1-\hat{y}}$$
+
+<p>Combining over a common denominator $\hat{y}(1-\hat{y})$:</p>
+
+$$\frac{\partial L_{BCE}}{\partial \hat{y}} = -\frac{y}{\hat{y}} + \frac{1-y}{1-\hat{y}} = \frac{-y(1-\hat{y}) + (1-y)\hat{y}}{\hat{y}(1-\hat{y})} = \frac{\hat{y} - y}{\hat{y}(1-\hat{y})}$$
+
+<div class="boxed">
+$$\frac{\partial L_{BCE}}{\partial \hat{y}} = \frac{\hat{y} - y}{\hat{y}(1-\hat{y})}$$
+</div>
+
+<h4>Step 2 — Apply the Chain Rule to Get δ²</h4>
+
+<p>Since $\hat{y} = \sigma(Z^2)$, the output layer error signal is:</p>
+
+$$\delta^2 = \frac{\partial L}{\partial Z^2} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial Z^2} = \frac{\hat{y} - y}{\hat{y}(1-\hat{y})} \cdot \hat{y}(1-\hat{y})$$
+
+<div class="key-result">
+$$\delta^2 = \hat{y} - y$$
+</div>
+
+<p>The $\hat{y}(1-\hat{y})$ term — the sigmoid derivative — appears in the <em>denominator</em> of $\frac{\partial L}{\partial \hat{y}}$ and <em>cancels exactly</em> with the sigmoid derivative from the chain rule. The gradient is always cleanly proportional to the prediction error, never vanishing regardless of how confident the network is.</p>
+
+<div class="compare">
+  <div class="compare-cell bad">
+    <div class="compare-title">MSE + Sigmoid (Bad)</div>
+    <p style="font-size:14px; margin:0;">$\delta^2 = (\hat{y} - y)\cdot\hat{y}(1-\hat{y})$<br/>When $\hat{y}=0.01, y=1$: $\delta^2 \approx -0.0098$<br/>Near-zero gradient when most wrong.</p>
+  </div>
+  <div class="compare-cell good">
+    <div class="compare-title">BCE + Sigmoid (Correct)</div>
+    <p style="font-size:14px; margin:0;">$\delta^2 = (\hat{y} - y)$<br/>When $\hat{y}=0.01, y=1$: $\delta^2 = -0.99$<br/>Large gradient when most wrong. ✅</p>
+  </div>
+</div>
+</section>
+
+<!-- Loss comparison -->
+<section id="loss-comparison">
+<h3>MSE vs BCE — Side by Side</h3>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Property</th><th>MSE</th><th>Binary Cross-Entropy</th></tr></thead>
+  <tbody>
+    <tr><td>Formula</td><td>$\frac{1}{2}(y-\hat{y})^2$</td><td>$-[y\log\hat{y} + (1-y)\log(1-\hat{y})]$</td></tr>
+    <tr><td>Foundation</td><td>Euclidean geometry</td><td>Information theory</td></tr>
+    <tr><td>Output activation</td><td>Linear (regression)</td><td>Sigmoid (classification)</td></tr>
+    <tr><td>Gradient $\delta^2$</td><td>$(\hat{y}-y)\cdot\hat{y}(1-\hat{y})$</td><td>$(\hat{y}-y)$</td></tr>
+    <tr><td>Vanishing gradient at output?</td><td>Yes</td><td>No</td></tr>
+    <tr><td>Confident wrong predictions</td><td>Moderate penalty</td><td>Exponential penalty</td></tr>
+    <tr><td>Use case</td><td>Regression</td><td>Binary classification</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<!-- Matched pairs -->
+<section id="loss-decision">
+<h3>Matched Pairs — Activation + Loss</h3>
+
+<p>The most important design insight: output activation and loss function must always be chosen as a <strong>matched pair</strong>. Each pairing is specifically designed so their combined gradient is clean and the sigmoid/softmax derivative cancels out.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Problem Type</th><th>Output Activation</th><th>Loss Function</th><th>Gradient δ²</th></tr></thead>
+  <tbody>
+    <tr><td>Regression</td><td>Linear (none)</td><td>MSE</td><td>$(\hat{y}-y)$</td></tr>
+    <tr><td>Binary classification</td><td>Sigmoid</td><td>Binary Cross-Entropy</td><td>$(\hat{y}-y)$</td></tr>
+    <tr><td>Multi-class classification</td><td>Softmax</td><td>Categorical Cross-Entropy</td><td>$(\hat{y}-y)$</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="insight">
+  <strong>All three correctly-matched pairs produce the identical gradient form</strong> $\delta^2 = \hat{y} - y$. This is not a coincidence — the activation function and loss function are engineered together so their derivatives cancel, guaranteeing a clean error signal at the very first step of backpropagation. Everything upstream inherits this clean signal.
+</div>
+</section>
+
+<!-- ════════════════════ PART 3 ════════════════════ -->
+<div class="part-divider" id="part3">
+  <span class="part-num">Part 3</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>Softmax Output Layer</h2>
+
+<p>Binary Cross-Entropy handles two classes. When there are $N > 2$ <em>mutually exclusive</em> classes, we need a generalization. Softmax converts a vector of raw scores into a proper probability distribution over $N$ classes.</p>
+
+<!-- Definition -->
+<section id="softmax-definition">
+<h3>Definition &amp; Properties</h3>
+
+<p>For an output layer with $N$ neurons, the pre-activation vector is $\mathbf{Z^2} = [z_1, z_2, \ldots, z_N]^T$. Softmax maps this to a probability vector:</p>
+
+<div class="key-result">
+$$\hat{y}_i = \text{softmax}(z_i) = \frac{e^{z_i}}{\displaystyle\sum_{k=1}^{N} e^{z_k}}, \quad i = 1, 2, \ldots, N$$
+</div>
+
+<h4>Three Essential Properties</h4>
+
+<p><strong>Property 1 — All outputs are positive:</strong> Since $e^{z_i} > 0$ for all real $z_i$, and the denominator is a sum of positive numbers, $\hat{y}_i > 0$ always.</p>
+
+<p><strong>Property 2 — Outputs sum to 1:</strong></p>
+
+$$\sum_{i=1}^{N} \hat{y}_i = \sum_{i=1}^{N} \frac{e^{z_i}}{\sum_k e^{z_k}} = \frac{\sum_i e^{z_i}}{\sum_k e^{z_k}} = 1$$
+
+<p>Together, Properties 1 and 2 make $\hat{y}$ a valid probability distribution.</p>
+
+<p><strong>Property 3 — Translation invariance:</strong> Adding a constant $c$ to all inputs leaves the output unchanged:</p>
+
+$$\frac{e^{z_i + c}}{\sum_k e^{z_k + c}} = \frac{e^c \cdot e^{z_i}}{e^c \cdot \sum_k e^{z_k}} = \frac{e^{z_i}}{\sum_k e^{z_k}} = \hat{y}_i$$
+
+<div class="insight">
+  <strong>Numerical stability trick:</strong> In practice, $e^{z_i}$ can overflow to infinity for large $z_i$. By Property 3, setting $c = -\max_k(z_k)$ shifts all inputs to be $\leq 0$ before exponentiation, preventing overflow without changing the output. This is standard in all implementations.
+</div>
+</section>
+
+<!-- Softmax Jacobian -->
+<section id="softmax-jacobian">
+<h3>The Softmax Jacobian — Why It Is Not Diagonal</h3>
+
+<p>Recall that for the sigmoid hidden layer in Part 1, the Jacobian $\frac{\partial \mathbf{A^1}}{\partial \mathbf{Z^1}}$ was <em>diagonal</em> because each neuron's activation depended only on its own input. Softmax is fundamentally different — every output $\hat{y}_i$ depends on <em>all</em> inputs $z_k$ via the shared denominator $\sum_k e^{z_k}$. The Jacobian is fully dense.</p>
+
+<h4>Case 1: $i = k$ (Diagonal Elements)</h4>
+
+$$\frac{\partial \hat{y}_i}{\partial z_i} = \frac{\partial}{\partial z_i}\left[\frac{e^{z_i}}{\sum_k e^{z_k}}\right]$$
+
+<p>Apply quotient rule with $f = e^{z_i}$, $g = \sum_k e^{z_k}$, so $f' = e^{z_i}$, $g' = e^{z_i}$:</p>
+
+$$= \frac{e^{z_i} \cdot \sum_k e^{z_k} - e^{z_i} \cdot e^{z_i}}{\left(\sum_k e^{z_k}\right)^2} = \frac{e^{z_i}}{\sum_k e^{z_k}} - \left(\frac{e^{z_i}}{\sum_k e^{z_k}}\right)^2 = \hat{y}_i - \hat{y}_i^2$$
+
+<div class="boxed">
+$$\frac{\partial \hat{y}_i}{\partial z_i} = \hat{y}_i(1 - \hat{y}_i) \quad \text{(diagonal)}$$
+</div>
+
+<h4>Case 2: $i \neq k$ (Off-Diagonal Elements)</h4>
+
+$$\frac{\partial \hat{y}_i}{\partial z_k} = \frac{\partial}{\partial z_k}\left[\frac{e^{z_i}}{\sum_j e^{z_j}}\right]$$
+
+<p>Now $e^{z_i}$ is constant w.r.t. $z_k$ (since $i \neq k$), so only the denominator changes with $g' = e^{z_k}$:</p>
+
+$$= \frac{0 \cdot \sum_j e^{z_j} - e^{z_i} \cdot e^{z_k}}{\left(\sum_j e^{z_j}\right)^2} = -\frac{e^{z_i}}{\sum_j e^{z_j}} \cdot \frac{e^{z_k}}{\sum_j e^{z_j}}$$
+
+<div class="boxed">
+$$\frac{\partial \hat{y}_i}{\partial z_k} = -\hat{y}_i \cdot \hat{y}_k \quad \text{(off-diagonal)}$$
+</div>
+
+<h4>The Full Softmax Jacobian</h4>
+
+$$\frac{\partial \hat{\mathbf{y}}}{\partial \mathbf{Z^2}} = \begin{bmatrix} \hat{y}_1(1-\hat{y}_1) & -\hat{y}_1\hat{y}_2 & \cdots & -\hat{y}_1\hat{y}_N \\ -\hat{y}_2\hat{y}_1 & \hat{y}_2(1-\hat{y}_2) & \cdots & -\hat{y}_2\hat{y}_N \\ \vdots & \vdots & \ddots & \vdots \\ -\hat{y}_N\hat{y}_1 & -\hat{y}_N\hat{y}_2 & \cdots & \hat{y}_N(1-\hat{y}_N) \end{bmatrix}$$
+
+<div class="warning">
+  <strong>Critical difference from the hidden layer Jacobian:</strong> The sigmoid hidden layer Jacobian was diagonal because neurons were independent. Softmax's Jacobian is fully dense because all outputs share the same denominator — changing any one $z_k$ redistributes probability mass across <em>all</em> outputs simultaneously. This makes the gradient derivation below significantly more involved.
+</div>
+</section>
+
+<!-- CCE -->
+<section id="cce">
+<h3>Categorical Cross-Entropy (CCE)</h3>
+
+<p>For multi-class classification with $N$ classes, the true label is encoded as a <strong>one-hot vector</strong> — all zeros except a single 1 at the correct class index $c$:</p>
+
+$$y = [0, \ldots, 0, \underbrace{1}_{c}, 0, \ldots, 0]$$
+
+<p>The loss is:</p>
+
+<div class="key-result">
+$$L_{CCE} = -\sum_{i=1}^{N} y_i \log(\hat{y}_i)$$
+</div>
+
+<p>Because $y$ is one-hot, all terms with $y_i = 0$ vanish. Only the correct class $c$ survives:</p>
+
+$$L_{CCE} = -\log(\hat{y}_c)$$
+
+<p>This is beautifully simple: the entire loss reduces to the negative log of the probability assigned to the correct class. Examples:</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Correct class probability ŷ_c</th><th>Loss = −log(ŷ_c)</th><th>Interpretation</th></tr></thead>
+  <tbody>
+    <tr><td>0.99</td><td>0.010</td><td>Very confident and correct — near zero loss</td></tr>
+    <tr><td>0.70</td><td>0.357</td><td>Correct but uncertain</td></tr>
+    <tr><td>0.33</td><td>1.109</td><td>Uniform guess across 3 classes</td></tr>
+    <tr><td>0.10</td><td>2.303</td><td>Leaning wrong</td></tr>
+    <tr><td>0.01</td><td>4.605</td><td>Very confident and wrong — huge loss</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<!-- CCE gradient -->
+<section id="cce-gradient">
+<h3>CCE + Softmax Gradient — Full Derivation</h3>
+
+<p>We need $\frac{\partial L}{\partial z_k}$ for all $k = 1, \ldots, N$ — the gradient of CCE w.r.t. each output pre-activation.</p>
+
+<h4>Step 1 — Gradient of CCE w.r.t. ŷᵢ</h4>
+
+$$\frac{\partial L}{\partial \hat{y}_i} = \frac{\partial}{\partial \hat{y}_i}\left[-\sum_j y_j \log \hat{y}_j\right] = -\frac{y_i}{\hat{y}_i}$$
+
+<h4>Step 2 — Apply the Matrix Chain Rule</h4>
+
+$$\frac{\partial L}{\partial z_k} = \sum_{i=1}^{N} \frac{\partial L}{\partial \hat{y}_i} \cdot \frac{\partial \hat{y}_i}{\partial z_k} = \sum_{i=1}^{N} \left(-\frac{y_i}{\hat{y}_i}\right) \cdot \frac{\partial \hat{y}_i}{\partial z_k}$$
+
+<h4>Step 3 — Split into Diagonal and Off-Diagonal</h4>
+
+<p>Using the two Jacobian cases derived above:</p>
+
+$$\frac{\partial L}{\partial z_k} = \left(-\frac{y_k}{\hat{y}_k}\right)\cdot\hat{y}_k(1-\hat{y}_k) + \sum_{i \neq k}\left(-\frac{y_i}{\hat{y}_i}\right)\cdot(-\hat{y}_i\hat{y}_k)$$
+
+<h4>Step 4 — Simplify</h4>
+
+$$= -y_k(1-\hat{y}_k) + \sum_{i \neq k} y_i \hat{y}_k$$
+
+$$= -y_k + y_k\hat{y}_k + \hat{y}_k\sum_{i \neq k} y_i$$
+
+$$= -y_k + \hat{y}_k\left[y_k + \sum_{i \neq k} y_i\right]$$
+
+$$= -y_k + \hat{y}_k \cdot \underbrace{\sum_{i=1}^{N} y_i}_{= 1 \text{ since y is one-hot}}$$
+
+<div class="key-result">
+$$\frac{\partial L}{\partial z_k} = \hat{y}_k - y_k$$
+</div>
+
+<p>Despite the fully dense Softmax Jacobian — every entry non-zero, far more complex than the diagonal Jacobian in Part 1 — the entire computation collapses to the same clean form: <strong>prediction minus truth</strong>. The one-hot property ($\sum_i y_i = 1$) is the key that triggers this cancellation.</p>
+
+<div class="insight">
+  <strong>In vector form:</strong> $\frac{\partial L}{\partial \mathbf{Z^2}} = \hat{\mathbf{y}} - \mathbf{y}$. Each output neuron's gradient is simply its predicted probability minus its true label (0 or 1). For the correct class: gradient $= \hat{y}_c - 1$ (negative, pushing probability up). For all other classes: gradient $= \hat{y}_k - 0 = \hat{y}_k$ (positive, pushing probability down). This is exactly the correct corrective behavior.
+</div>
+</section>
+
+<!-- Numerical Softmax -->
+<section id="numerical-softmax">
+<h3>Numerical Example — 3-Class Classification</h3>
+
+<h4>Setup</h4>
+
+<pre>Classes:  Cat (0), Dog (1), Bird (2)
+True label: Dog  →  y = [0, 1, 0]  (one-hot)
+Output pre-activations: Z² = [2.0, 4.0, 1.5]</pre>
+
+<h4>Forward Pass — Softmax</h4>
+
+<p>Compute $e^{z_i}$ for each class (using numerical stability: subtract max = 4.0):</p>
+
+$$z' = [2.0-4.0,\ 4.0-4.0,\ 1.5-4.0] = [-2.0,\ 0.0,\ -2.5]$$
+
+$$e^{z'} = [e^{-2.0},\ e^{0},\ e^{-2.5}] = [0.1353,\ 1.0,\ 0.0821]$$
+
+$$\text{Sum} = 0.1353 + 1.0 + 0.0821 = 1.2174$$
+
+$$\hat{y} = \left[\frac{0.1353}{1.2174},\ \frac{1.0}{1.2174},\ \frac{0.0821}{1.2174}\right] = [0.111,\ 0.822,\ 0.067]$$
+
+<h4>Loss</h4>
+
+$$L_{CCE} = -\log(\hat{y}_{\text{Dog}}) = -\log(0.822) = 0.196$$
+
+<p>The network correctly assigns 82.2% probability to Dog — loss is low.</p>
+
+<h4>Gradient</h4>
+
+$$\frac{\partial L}{\partial \mathbf{Z^2}} = \hat{\mathbf{y}} - \mathbf{y} = [0.111 - 0,\ 0.822 - 1,\ 0.067 - 0] = [0.111,\ -0.178,\ 0.067]$$
+
+<p>Interpretation:</p>
+<ul style="padding-left:24px; margin:12px 0; color:var(--text);">
+  <li style="margin:6px 0;">Cat: gradient $= +0.111$ → push $z_{\text{Cat}}$ down, reducing Cat's probability</li>
+  <li style="margin:6px 0;">Dog: gradient $= -0.178$ → push $z_{\text{Dog}}$ up, increasing Dog's probability</li>
+  <li style="margin:6px 0;">Bird: gradient $= +0.067$ → push $z_{\text{Bird}}$ down, reducing Bird's probability</li>
+</ul>
+<p>The gradient naturally corrects all three outputs simultaneously in the right direction.</p>
+</section>
+
+<!-- ════════════════════ PART 4 ════════════════════ -->
+<div class="part-divider" id="part4">
+  <span class="part-num">Part 4</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>The Unified Pattern</h2>
+
+<p>Stepping back across all three parts of this series, one pattern emerges with remarkable consistency.</p>
+
+<p>Every correctly matched pair of output activation and loss function produces the same gradient form at the output layer:</p>
+
+$$\boxed{\delta^2 = \hat{y} - y}$$
+
+<p>This holds for MSE + linear output (regression), BCE + sigmoid (binary classification), and CCE + softmax (multi-class). The derivations are completely different — MSE involves a squared difference, BCE involves logarithms and information theory, CCE involves a dense Jacobian — yet all three arrive at the same destination.</p>
+
+<p>This is not accidental. Each pairing is an engineered matching where the activation function's derivative and the loss function's gradient are specifically designed to cancel. The result is that backpropagation always begins with the cleanest possible signal: prediction minus truth, unobscured by any additional factors.</p>
+
+<p>For hidden layers, the pattern is different — the sigmoid derivative $A(1-A)$ does appear and does not cancel, which is exactly why we replace sigmoid with ReLU (derivative = 1) or its variants. The vanishing gradient problem is a hidden-layer problem; the clean gradient design is an output-layer solution. Understanding both sides of this — why outputs are designed one way and hidden layers another — is the core of understanding neural network architecture decisions.</p>
+
+<!-- ════════════════════ PART 5 ════════════════════ -->
+<div class="part-divider" id="part5">
+  <span class="part-num">Part 5</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>Weight Initialization</h2>
+
+<p>Everything we have discussed so far assumes the network already has weights to update. But every network must start somewhere — weights must be assigned <em>before</em> the first forward pass. The choice of those initial values turns out to matter enormously, and getting it wrong can make training fail completely before a single gradient update is applied.</p>
+
+<section id="why-init-matters">
+<h3>Why Initialization Matters</h3>
+
+<p>Think of initialization as setting the starting conditions for the entire learning process. The gradients we computed in Parts 1 and 2 flow backward through the network and update weights from wherever they started. If the starting point is poor, the network may never recover — not because the learning algorithm is broken, but because the initial signal is already broken.</p>
+
+<p>There are two ways initialization can go wrong, and they are mirror images of each other.</p>
+
+<p><strong>Too large — Exploding activations and gradients.</strong> If initial weights are large, the pre-activation values $Z = WX + b$ become large. For sigmoid and tanh, large inputs cause saturation — the neuron output is stuck near 0 or 1, the gradient is near zero, and learning stops immediately. For ReLU, large weights can cause gradients to explode as they flow backward through layers, making weight updates wildly unstable.</p>
+
+<p><strong>Too small — Vanishing activations and gradients.</strong> If initial weights are very small (say, all near zero), then every layer's output is also near zero regardless of input. The network collapses — all neurons produce essentially the same output, and there is no meaningful gradient signal to differentiate them. Worse, all neurons evolve identically during training because they started identically. This is called the <em>symmetry problem</em>.</p>
+
+<div class="warning">
+  <strong>Never initialize all weights to zero.</strong> If every weight is zero, every neuron in a layer computes the exact same output, receives the exact same gradient, and updates to the exact same value. No matter how long you train, all neurons in a layer remain identical — the network has effectively just one neuron per layer. Weights must be initialized asymmetrically, which is why random initialization is always used.
+</div>
+</section>
+
+<section id="init-options">
+<h3>Initialization Options</h3>
+
+<h4>Random Uniform / Random Normal (Naive)</h4>
+
+<p>The simplest approach: draw each weight from a uniform distribution (e.g. between −0.05 and +0.05) or a normal distribution with a small standard deviation. This breaks symmetry, which is the minimum requirement. However, it ignores the network's depth and width, which means it tends to produce either too-large or too-small activations as the network grows deeper. Fine for very shallow networks; problematic otherwise.</p>
+
+<h4>Xavier / Glorot Initialization</h4>
+
+<p>Proposed by Xavier Glorot and Yoshua Bengio in 2010, this is the standard choice for networks using <strong>sigmoid or tanh activations</strong>. The core idea is elegant: <em>keep the variance of activations approximately equal across all layers, in both the forward and backward pass</em>.</p>
+
+<p>If the variance shrinks layer by layer (small weights), signals vanish. If it grows (large weights), signals explode. Xavier initialization sets the initial weight variance to balance these two pressures simultaneously, based on the number of inputs ($n_{in}$) and outputs ($n_{out}$) of each layer.</p>
+
+<p>Intuitively: a layer with many input connections needs smaller individual weights so that the sum does not explode. Xavier scales the weights accordingly — wider layers get smaller initial weights.</p>
+
+<div class="insight">
+  <strong>Key assumption:</strong> Xavier initialization is derived assuming the activation function is approximately linear near zero — which holds for sigmoid and tanh (both behave like a line near $z = 0$). This assumption breaks down for ReLU, which is why a different initialization is needed for ReLU networks.
+</div>
+
+<h4>He / Kaiming Initialization</h4>
+
+<p>Proposed by Kaiming He in 2015, specifically designed for <strong>ReLU and its variants</strong>. The derivation follows the same logic as Xavier — keep variance stable across layers — but accounts for the fact that ReLU zeroes out half of all inputs (the negative half). Since half the neurons are inactive, only half the weights are effectively contributing to the signal at any moment. He initialization compensates by making the initial weights roughly $\sqrt{2}$ times larger than Xavier would suggest, restoring the signal variance that ReLU's zeroing would otherwise destroy.</p>
+
+<p>This is now the default initialization in most deep learning frameworks (PyTorch, TensorFlow) when using ReLU activations.</p>
+
+<h4>Orthogonal Initialization</h4>
+
+<p>Rather than sampling weights randomly from a distribution, orthogonal initialization constructs the weight matrix to be an <em>orthogonal matrix</em> — one where the rows and columns are all perpendicular to each other and of equal length. The practical effect is that the network's initial transformation neither stretches nor compresses the signal in any particular direction. This is particularly useful for very deep networks and recurrent networks where the same weight matrix is applied repeatedly across time steps.</p>
+
+<h4>Pre-trained / Transfer Learning Initialization</h4>
+
+<p>Instead of starting from random weights, initialize the network with weights from a model already trained on a related task. For example, initialize an image classifier with weights from a model trained on ImageNet. Only the final output layer is randomized. This is called <em>transfer learning</em> and is arguably the most powerful initialization strategy in practice — the network starts not from random noise but from learned, meaningful representations. Fine-tuning then adjusts these weights for the specific task at hand.</p>
+</section>
+
+<section id="init-summary">
+<h3>Which to Use — Decision Summary</h3>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Initialization</th><th>Best for</th><th>Core Idea</th></tr></thead>
+  <tbody>
+    <tr><td>Xavier / Glorot</td><td>Sigmoid, Tanh activations</td><td>Balance variance forward and backward; scales by layer width</td></tr>
+    <tr><td>He / Kaiming</td><td>ReLU, Leaky ReLU</td><td>Xavier × √2 to compensate for ReLU zeroing half of inputs</td></tr>
+    <tr><td>Orthogonal</td><td>Very deep networks, RNNs</td><td>Preserve signal magnitude by using a rotation-like matrix</td></tr>
+    <tr><td>Transfer learning</td><td>Most practical applications</td><td>Start from already-learned representations, fine-tune</td></tr>
+    <tr><td>Zero / constant</td><td>Biases only</td><td>Biases are safe to initialize at zero; weights never should be</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="insight">
+  <strong>Biases are the exception.</strong> While weights must be random to break symmetry, biases are safe to initialize to zero. Each neuron's bias is a single value shared by no other neuron, so identical bias initialization does not create the symmetry problem. Zero is the standard default for biases in all frameworks.
+</div>
+</section>
+
+<!-- ════════════════════ PART 6 ════════════════════ -->
+<div class="part-divider" id="part6">
+  <span class="part-num">Part 6</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>Optimizers Beyond Gradient Descent</h2>
+
+<p>The basic gradient descent update rule we proved in Part 1 is:</p>
+
+$$W := W - \alpha \cdot \frac{\partial L}{\partial W}$$
+
+<p>This works in principle but has practical limitations that become severe as networks scale. All modern optimizers are improvements built on top of this foundation. Understanding what each one fixes — and why — is essential for knowing which to choose.</p>
+
+<section id="sgd-problems">
+<h3>The Problems With Vanilla Gradient Descent</h3>
+
+<p><strong>Problem 1 — Same learning rate for every parameter.</strong> Vanilla gradient descent applies the same $\alpha$ to every single weight in the network, regardless of how frequently it is updated, how large its gradients are, or how sensitive the loss is to it. In practice, different parameters need very different effective learning rates. A weight connected to a rare input feature should update aggressively when that feature appears; a weight updated constantly should be more conservative.</p>
+
+<p><strong>Problem 2 — Oscillation in ravines.</strong> Loss landscapes often have long narrow valleys — steep in one direction, shallow in another (imagine a stretched bowl). Gradient descent with a fixed learning rate oscillates wildly across the steep dimension while barely moving along the shallow dimension toward the minimum. Progress is slow and erratic.</p>
+
+<p><strong>Problem 3 — Getting stuck in local minima and saddle points.</strong> A pure gradient-following algorithm has no mechanism to escape a local minimum or push through a saddle point where the gradient is zero in some directions. It simply stops.</p>
+
+<p>Each optimizer below addresses one or more of these problems.</p>
+</section>
+
+<section id="momentum">
+<h3>Momentum</h3>
+
+<p>Momentum addresses the oscillation problem by introducing a <em>velocity</em> term — a memory of recent gradient directions. Instead of taking a step purely based on the current gradient, the update accumulates a running average of past gradients.</p>
+
+<p>Think of it physically: a ball rolling down a hill does not just respond to the current slope — it has built up speed in a consistent direction. The ball accelerates through flat regions, smoothly curves around obstacles, and dampens oscillations because its momentum carries it through brief reversals.</p>
+
+<p>In practice: if the gradients have been consistently pointing in the same direction across many updates, the velocity grows and the effective step size increases — the network accelerates toward the minimum. If gradients keep reversing direction (oscillation), the opposing velocities cancel each other and the step size shrinks — oscillation is damped.</p>
+
+<p>The momentum coefficient (typically 0.9) controls how much history is retained — a value of 0.9 means 90% of the previous velocity is carried forward.</p>
+
+<div class="insight">
+  <strong>Nesterov Momentum</strong> is a refinement: instead of computing the gradient at the current position and then applying momentum, it first takes a step in the momentum direction and <em>then</em> computes the gradient. This "look-ahead" behavior corrects the trajectory before committing to the full update, leading to faster convergence on many problems.
+</div>
+</section>
+
+<section id="adagrad">
+<h3>AdaGrad — Adaptive Gradient</h3>
+
+<p>AdaGrad addresses the same-learning-rate problem by adapting the learning rate individually for each parameter, based on its history of gradients. The core idea: <em>parameters that have received large gradients historically should get a smaller learning rate; parameters that have received small gradients should get a larger learning rate.</em></p>
+
+<p>It does this by accumulating the sum of squared gradients for each parameter and dividing the learning rate by the square root of that sum. A parameter that has seen many large gradients accumulates a large sum, shrinking its effective learning rate. A parameter that has seen mostly small gradients accumulates a small sum, keeping its learning rate large.</p>
+
+<p>This is particularly useful for <strong>sparse data</strong> — where some features appear rarely and others constantly. Rare features should be learned aggressively when they do appear (small accumulated gradient → large effective learning rate). Frequent features should be updated conservatively (large accumulated gradient → small effective learning rate).</p>
+
+<p><strong>Limitation:</strong> The sum of squared gradients only ever increases. Eventually every parameter's effective learning rate decays to near zero and learning stops, even if there is still meaningful gradient signal. This makes AdaGrad poorly suited to very long training runs.</p>
+</section>
+
+<section id="rmsprop">
+<h3>RMSProp — Root Mean Square Propagation</h3>
+
+<p>RMSProp fixes AdaGrad's monotonically shrinking learning rate by replacing the accumulated sum of squared gradients with a <em>moving average</em> — only recent gradient history counts, not the entire history from the beginning of training.</p>
+
+<p>Instead of the denominator growing without bound, old gradients gradually fade from the average (controlled by a decay factor, typically 0.9). The effective learning rate adapts based on recent gradient magnitudes, not all-time magnitudes.</p>
+
+<p>This makes RMSProp well-suited to <strong>non-stationary problems</strong> — problems where the loss landscape changes during training, which describes most deep learning tasks. Empirically, RMSProp works particularly well for recurrent neural networks and was widely used before Adam became dominant.</p>
+</section>
+
+<section id="adam">
+<h3>Adam — Adaptive Moment Estimation</h3>
+
+<p>Adam combines the best ideas from both Momentum and RMSProp into a single optimizer, and is the default choice for the vast majority of deep learning tasks today.</p>
+
+<p>It maintains two running averages for each parameter:</p>
+
+<p><strong>First moment (mean of gradients)</strong> — like Momentum, this tracks the direction and magnitude of recent gradients, providing the velocity that smooths oscillations and accelerates consistent directions.</p>
+
+<p><strong>Second moment (mean of squared gradients)</strong> — like RMSProp, this tracks recent gradient magnitudes, allowing the learning rate to adapt per-parameter based on how large recent gradients have been.</p>
+
+<p>The update for each parameter divides the momentum term by the square root of the second moment — so parameters with large recent gradients take smaller steps, and parameters with small recent gradients take larger steps. Both effects happen simultaneously, per parameter, at every update step.</p>
+
+<p>Adam also includes a <em>bias correction</em> step for the first few iterations, because the running averages are initialized at zero and would otherwise underestimate the true gradient moments at the start of training.</p>
+
+<div class="insight">
+  <strong>Why Adam is the default:</strong> It requires almost no tuning. The default hyperparameters (learning rate 0.001, decay rates 0.9 and 0.999) work well across an extraordinarily wide range of architectures and tasks. Momentum requires tuning the momentum coefficient. AdaGrad stops learning. RMSProp needs careful learning rate selection. Adam just works — which is why it is the starting point for nearly every new project.
+</div>
+
+<div class="note">
+  <strong>AdamW</strong> is a common variant that separates the weight decay (regularization) term from the gradient update — the standard Adam implementation conflates the two, which can lead to suboptimal regularization. AdamW fixes this and is now preferred over Adam in transformer-based models (GPT, BERT, etc.).
+</div>
+</section>
+
+<section id="optimizer-summary">
+<h3>Optimizer Comparison</h3>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Optimizer</th><th>What it fixes</th><th>Limitation</th><th>Best for</th></tr></thead>
+  <tbody>
+    <tr><td>Vanilla GD</td><td>—</td><td>Oscillation, same LR for all, slow</td><td>Teaching only</td></tr>
+    <tr><td>Momentum</td><td>Oscillation, slow ravines</td><td>Still one global LR</td><td>Simple deep networks</td></tr>
+    <tr><td>AdaGrad</td><td>Per-parameter LR</td><td>LR decays to zero permanently</td><td>Sparse data, NLP</td></tr>
+    <tr><td>RMSProp</td><td>Per-parameter LR, no decay</td><td>No momentum</td><td>RNNs, non-stationary</td></tr>
+    <tr><td>Adam</td><td>Momentum + per-parameter LR</td><td>Can overfit, weight decay issue</td><td>Default for almost everything</td></tr>
+    <tr><td>AdamW</td><td>Adam + correct weight decay</td><td>Slightly more hyperparameters</td><td>Transformers, LLMs</td></tr>
+  </tbody>
+</table>
+</div>
+
+<pre>Which optimizer should I use?
+  │
+  ├── Starting a new project?                  → Adam (default, lr=0.001)
+  ├── Training a transformer / LLM?            → AdamW
+  ├── Sparse features / NLP embeddings?        → AdaGrad or Adam
+  ├── Recurrent network (RNN/LSTM)?            → RMSProp or Adam
+  └── Research / squeezing final performance? → SGD + Momentum + LR schedule</pre>
+</section>
+
+</section>
+
+<!-- ════════════════════ PART 7 ════════════════════ -->
+<div class="part-divider" id="part7">
+  <span class="part-num">Part 7</span>
+  <div class="part-line"></div>
+</div>
+
+<h2>L1 and L2 Regularization</h2>
+
+<div class="insight">
+  <strong>In one paragraph:</strong> L1 and L2 Regularization add a penalty term directly to your loss function — so instead of minimizing just $L$, you minimize $L + \lambda \cdot \text{penalty}(W)$. This changes the gradient equations you derived in a straightforward, traceable way. L2 (Ridge) pushes weights toward zero <em>smoothly</em>; L1 (Lasso) drives some weights to <em>exactly</em> zero, effectively removing those connections from the network entirely.
+</div>
+
+<p>Every optimization technique in Part 6 addresses <em>how</em> the network learns — the mechanics of updating weights. Regularization addresses a different question entirely: <em>what</em> the network is learning, and whether it will generalize to data it has never seen.</p>
+
+<p>A network that memorizes the training data perfectly but fails on new data is said to have <strong>overfit</strong>. Overfitting happens when the network learns to exploit specific quirks or noise in the training data rather than the underlying patterns. The symptom is a very low training loss paired with a high validation loss. Regularization is the family of techniques that penalize complexity to prevent this.</p>
+
+<section id="the-idea">
+<h3>The Core Idea — Penalizing the Loss</h3>
+
+<p>Both L1 and L2 regularization work by modifying the loss function itself. Instead of minimizing just the prediction error $L$, we minimize a combined objective:</p>
+
+<div class="key-result">
+$$L_{\text{total}} = L + \lambda \cdot \text{penalty}(W)$$
+</div>
+
+<p>where $\lambda$ (lambda) is the <strong>regularization strength</strong> — a hyperparameter you choose that controls how strongly the penalty is enforced. A larger $\lambda$ means the network cares more about keeping weights small and less about fitting the training data precisely.</p>
+
+<p>The penalty term $\text{penalty}(W)$ is a measure of the complexity of the weights. The two choices — L1 and L2 — define this measure differently, and that difference in definition leads to a profound difference in behavior.</p>
+</section>
+
+<section id="l2">
+<h3>L2 Regularization — Ridge</h3>
+
+<p>L2 regularization defines the penalty as the <strong>sum of squared weights</strong>:</p>
+
+<div class="boxed">
+$$L_{\text{total}} = L + \frac{\lambda}{2} \sum_{i} w_i^2$$
+</div>
+
+<p>The $\frac{1}{2}$ is a convenience factor — when we differentiate, it cancels the exponent of 2 cleanly, leaving just $\lambda w_i$ as the gradient contribution. This is the same trick used with the $\frac{1}{2}$ in MSE.</p>
+
+<h4>How It Changes the Gradient</h4>
+
+<p>Because the penalty is added directly to the loss, differentiating $L_{\text{total}}$ with respect to any weight $w_i$ simply adds the penalty's derivative to the original gradient:</p>
+
+$$\frac{\partial L_{\text{total}}}{\partial w_i} = \frac{\partial L}{\partial w_i} + \lambda w_i$$
+
+<p>The weight update rule then becomes:</p>
+
+$$w_i := w_i - \alpha \left(\frac{\partial L}{\partial w_i} + \lambda w_i\right) = w_i(1 - \alpha\lambda) - \alpha \frac{\partial L}{\partial w_i}$$
+
+<p>The factor $(1 - \alpha\lambda)$ multiplies the current weight before the gradient step. Since $\alpha\lambda$ is a small positive number, this factor is slightly less than 1 — every update <em>shrinks</em> the weight by a small fraction before adding the gradient correction. This is why L2 regularization is also called <strong>weight decay</strong> — the weights decay toward zero at every step, regardless of the gradient.</p>
+
+<div class="insight">
+  <strong>What L2 produces:</strong> All weights are pushed smoothly and continuously toward zero, but none are forced all the way to exactly zero. The result is a network where many weights are small but present — no neuron is completely removed, but no single weight dominates. This tends to produce smooth, distributed representations that generalize well.
+</div>
+</section>
+
+<section id="l1">
+<h3>L1 Regularization — Lasso</h3>
+
+<p>L1 regularization defines the penalty as the <strong>sum of absolute values of weights</strong>:</p>
+
+<div class="boxed">
+$$L_{\text{total}} = L + \lambda \sum_{i} |w_i|$$
+</div>
+
+<h4>How It Changes the Gradient</h4>
+
+<p>The derivative of $|w_i|$ with respect to $w_i$ is $\text{sign}(w_i)$ — it is $+1$ when the weight is positive and $-1$ when the weight is negative (undefined at exactly zero, but this rarely occurs in practice):</p>
+
+$$\frac{\partial L_{\text{total}}}{\partial w_i} = \frac{\partial L}{\partial w_i} + \lambda \cdot \text{sign}(w_i)$$
+
+<p>The weight update becomes:</p>
+
+$$w_i := w_i - \alpha\frac{\partial L}{\partial w_i} - \alpha\lambda \cdot \text{sign}(w_i)$$
+
+<p>The penalty subtracts a fixed constant $\alpha\lambda$ from positive weights and adds $\alpha\lambda$ to negative weights — pushing all weights toward zero by a <em>constant amount</em> at every step, regardless of their magnitude.</p>
+
+<div class="insight">
+  <strong>What L1 produces:</strong> Because the penalty is a fixed constant step rather than a proportional shrinkage, small weights get pushed all the way to exactly zero — a small weight cannot resist a constant push. Large weights can resist (their gradient contribution is larger than the penalty), but small weights cannot. The result is a <strong>sparse</strong> network — many weights become exactly zero, effectively removing those connections entirely. This is why L1 is used for feature selection: it automatically identifies which inputs are irrelevant and zeroes out their connections.
+</div>
+</section>
+
+<section id="l1-vs-l2">
+<h3>L1 vs L2 — The Key Difference</h3>
+
+<p>The fundamental distinction comes down to <em>how the penalty grows as weights get larger</em>.</p>
+
+<p>For L2, the penalty grows as $w^2$ — quadratically. When a weight is large, the penalty is very large, creating strong pressure to reduce it. When a weight is small, the penalty is tiny, creating almost no pressure. L2 strongly penalizes outlier weights but barely touches weights already near zero — they are allowed to stay small rather than being pushed to exactly zero.</p>
+
+<p>For L1, the penalty grows as $|w|$ — linearly. The pressure to reduce a weight is the same constant $\lambda$ regardless of whether the weight is large or tiny. This constant pressure eventually forces small weights to zero, which L2's diminishing pressure never achieves.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Property</th><th>L2 (Ridge)</th><th>L1 (Lasso)</th></tr></thead>
+  <tbody>
+    <tr><td>Penalty term</td><td>$\sum w_i^2$</td><td>$\sum |w_i|$</td></tr>
+    <tr><td>Gradient addition</td><td>$+\lambda w_i$</td><td>$+\lambda \cdot \text{sign}(w_i)$</td></tr>
+    <tr><td>Penalty pressure on small weights</td><td>Diminishes toward zero</td><td>Constant — same for all weights</td></tr>
+    <tr><td>Effect on weights</td><td>Shrinks all weights smoothly</td><td>Drives many weights to exactly zero</td></tr>
+    <tr><td>Resulting network</td><td>Dense — all connections present, small</td><td>Sparse — many connections removed</td></tr>
+    <tr><td>Best for</td><td>General overfitting prevention</td><td>Feature selection, interpretability</td></tr>
+    <tr><td>Also known as</td><td>Weight decay</td><td>Lasso</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <strong>Elastic Net</strong> combines both penalties: $\lambda_1 \sum |w_i| + \lambda_2 \sum w_i^2$. It gets L1's sparsity-inducing property and L2's smooth handling of correlated features. Useful when you want automatic feature selection but the pure L1 solution is too aggressive.
+</div>
+</section>
+
+<section id="lambda-choice">
+<h3>Choosing λ — The Regularization Strength</h3>
+
+<p>The regularization strength $\lambda$ is a hyperparameter that must be tuned. There is no universal right value — it depends on the dataset size, network size, and how much overfitting is observed.</p>
+
+<p>The guiding principle is simple: <strong>$\lambda$ controls the tradeoff between fitting the training data and keeping weights small.</strong></p>
+
+<ul style="padding-left:24px; margin:14px 0; color:var(--text);">
+  <li style="margin:8px 0;"><strong>$\lambda$ too large</strong> — the penalty dominates, weights are forced near zero, and the network underfits. It cannot even learn the training data well.</li>
+  <li style="margin:8px 0;"><strong>$\lambda$ too small</strong> — the penalty is negligible, regularization has no effect, and the network overfits as if no regularization were applied.</li>
+  <li style="margin:8px 0;"><strong>$\lambda$ just right</strong> — the network fits the training data well while keeping weights from growing excessively large. Validated by monitoring the gap between training loss and validation loss.</li>
+</ul>
+
+<p>In practice, $\lambda$ is found via cross-validation — train with several candidate values and select the one that produces the best validation performance. Common starting values are $10^{-4}$, $10^{-3}$, and $10^{-2}$.</p>
+</section>
+
+<!-- ════════════════════ REFSHEET ════════════════════ -->
+<hr/>
+<section id="refsheet">
+<h2>Quick Reference Sheet</h2>
+
+<div class="refsheet">
+  <div class="rs-section">
+    <div class="rs-title">Activation Functions — Derivatives</div>
+    <div class="eq">σ′(z)       = σ(z)·(1−σ(z))             <span class="cm">← sigmoid</span></div>
+    <div class="eq">tanh′(z)    = 1 − tanh²(z)              <span class="cm">← tanh</span></div>
+    <div class="eq">ReLU′(z)    = 1 if z&gt;0, else 0         <span class="cm">← relu</span></div>
+    <div class="eq">LReLU′(z)   = 1 if z&gt;0, else α         <span class="cm">← leaky relu (α=0.01)</span></div>
+    <div class="eq">ELU′(z)     = 1 if z&gt;0, else ELU(z)+α  <span class="cm">← elu</span></div>
+  </div>
+  <div class="rs-section">
+    <div class="rs-title">Loss Functions</div>
+    <div class="eq">MSE       = ½(y−ŷ)²                               <span class="cm">← regression</span></div>
+    <div class="eq">BCE       = −[y·log(ŷ) + (1−y)·log(1−ŷ)]         <span class="cm">← binary classification</span></div>
+    <div class="eq">CCE       = −Σᵢ yᵢ·log(ŷᵢ) = −log(ŷ_c)           <span class="cm">← multi-class</span></div>
+  </div>
+  <div class="rs-section">
+    <div class="rs-title">Softmax Jacobian Elements</div>
+    <div class="eq">∂ŷᵢ/∂zᵢ  = ŷᵢ(1−ŷᵢ)    <span class="cm">← diagonal (i = k)</span></div>
+    <div class="eq">∂ŷᵢ/∂zₖ  = −ŷᵢ·ŷₖ      <span class="cm">← off-diagonal (i ≠ k)</span></div>
+  </div>
+  <div class="rs-section">
+    <div class="rs-title">Output Layer Gradients — Matched Pairs</div>
+    <div class="eq">MSE  + Linear  →  δ² = (ŷ−y)              <span class="cm">← regression</span></div>
+    <div class="eq">BCE  + Sigmoid →  δ² = (ŷ−y)              <span class="cm">← binary classification</span></div>
+    <div class="eq">CCE  + Softmax →  δ² = (ŷ−y)  [vector]    <span class="cm">← multi-class</span></div>
+  </div>
+  <div class="rs-section">
+    <div class="rs-title">Weight Initialization — When to Use</div>
+    <div class="eq">Xavier / Glorot  →  Sigmoid, Tanh activations     <span class="cm">← balances forward/backward variance</span></div>
+    <div class="eq">He / Kaiming     →  ReLU, Leaky ReLU              <span class="cm">← Xavier × √2, compensates for zeroing</span></div>
+    <div class="eq">Orthogonal       →  Very deep nets, RNNs           <span class="cm">← preserves signal magnitude</span></div>
+    <div class="eq">Transfer learn   →  Most practical tasks           <span class="cm">← start from pretrained weights</span></div>
+    <div class="eq">Zero             →  Biases only (never weights)    <span class="cm">← safe for biases, fatal for weights</span></div>
+  </div>
+  <div class="rs-section">
+    <div class="rs-title">Optimizers — Summary</div>
+    <div class="eq">Vanilla GD   →  W := W − α·∇W                          <span class="cm">← baseline, rarely used</span></div>
+    <div class="eq">Momentum     →  adds velocity to smooth oscillations      <span class="cm">← v = βv − α·∇W</span></div>
+    <div class="eq">AdaGrad      →  per-parameter LR, shrinks over time       <span class="cm">← good for sparse data</span></div>
+    <div class="eq">RMSProp      →  per-parameter LR, uses moving average      <span class="cm">← fixes AdaGrad decay</span></div>
+    <div class="eq">Adam         →  Momentum + RMSProp, default choice         <span class="cm">← lr=0.001, β₁=0.9, β₂=0.999</span></div>
+    <div class="eq">AdamW        →  Adam + correct weight decay                <span class="cm">← preferred for transformers</span></div>
+  </div>
+    <div class="eq">Hidden layers (default)    → ReLU</div>
+    <div class="eq">Hidden layers (dying ReLU) → Leaky ReLU or ELU</div>
+    <div class="eq">Hidden layers (transformers)→ GELU</div>
+    <div class="eq">Output (binary prob.)       → Sigmoid</div>
+    <div class="eq">Output (multi-class prob.)  → Softmax</div>
+    <div class="eq">Output (regression)         → Linear (none)</div>
+  </div>
+</div>
+</section>
+
+</article>
+</body>
+</html>
