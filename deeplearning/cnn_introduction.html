@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How CNNs See the World — A Visual Introduction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & BASE ─────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0d0f14;
+  --ink2:#1c1f2b;
+  --ink3:#2a2d3e;
+  --paper:#f7f5ef;
+  --paper2:#efecea;
+  --amber:#c8841a;
+  --amber-light:#f0a830;
+  --amber-pale:#fdf3df;
+  --teal:#1a9e7a;
+  --teal-light:#22c99b;
+  --teal-pale:#e2f8f1;
+  --coral:#d95f38;
+  --coral-pale:#fdf0ea;
+  --purple:#5b4fcf;
+  --purple-pale:#eeecfd;
+  --blue:#1a5faa;
+  --blue-pale:#e6f0fb;
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'Source Sans 3',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --max:860px;
+  --wide:1100px;
+}
+html{scroll-behavior:smooth;font-size:17px}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ─── PROGRESS BAR ─────────────────────────────────── */
+#progress{
+  position:fixed;top:0;left:0;height:3px;width:0%;
+  background:linear-gradient(90deg,var(--amber),var(--teal));
+  z-index:1000;transition:width 0.1s linear;
+}
+
+/* ─── NAV ───────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:900;
+  background:rgba(247,245,239,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(13,15,20,0.08);
+  padding:0 2rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.nav-logo{
+  font-family:var(--serif);font-weight:700;font-size:1rem;
+  color:var(--ink);letter-spacing:0.01em;
+}
+.nav-links{display:flex;gap:1.5rem;list-style:none}
+.nav-links a{
+  font-size:0.82rem;font-weight:600;letter-spacing:0.06em;
+  text-transform:uppercase;color:var(--ink);opacity:0.5;
+  text-decoration:none;transition:opacity 0.2s;
+}
+.nav-links a:hover{opacity:1}
+@media(max-width:600px){.nav-links{display:none}}
+
+/* ─── HERO ──────────────────────────────────────────── */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  padding:7rem 2rem 4rem;
+  position:relative;
+  overflow:hidden;
+  background:var(--ink2);
+}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 50%, rgba(90,80,210,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 40%, rgba(26,158,122,0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 80%, rgba(200,130,26,0.12) 0%, transparent 70%);
+  animation:bgshift 12s ease-in-out infinite alternate;
+}
+@keyframes bgshift{
+  0%{opacity:0.7}50%{opacity:1}100%{opacity:0.7}
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.hero-content{position:relative;z-index:2;max-width:760px}
+.hero-tag{
+  display:inline-block;
+  background:rgba(200,132,26,0.2);
+  color:var(--amber-light);
+  font-size:0.72rem;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;padding:6px 16px;border-radius:20px;
+  border:1px solid rgba(200,132,26,0.3);margin-bottom:2rem;
+}
+.hero h1{
+  font-family:var(--serif);font-size:clamp(2.6rem,7vw,5rem);
+  font-weight:900;line-height:1.1;color:#fff;
+  margin-bottom:1.5rem;letter-spacing:-0.02em;
+}
+.hero h1 em{color:var(--amber-light);font-style:normal}
+.hero-sub{
+  font-size:1.05rem;color:rgba(255,255,255,0.6);
+  max-width:560px;margin:0 auto 2.5rem;line-height:1.7;
+}
+.hero-meta{
+  display:flex;align-items:center;justify-content:center;
+  gap:1.5rem;flex-wrap:wrap;
+  font-size:0.8rem;color:rgba(255,255,255,0.4);
+  letter-spacing:0.04em;
+}
+.hero-meta span{display:flex;align-items:center;gap:6px}
+.hero-scroll{
+  position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:rgba(255,255,255,0.3);font-size:0.72rem;letter-spacing:0.1em;
+  text-transform:uppercase;animation:bounce 2s ease-in-out infinite;
+}
+.hero-scroll svg{width:20px;height:20px}
+@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
+
+/* ─── LAYOUT ────────────────────────────────────────── */
+.container{max-width:var(--max);margin:0 auto;padding:0 1.5rem}
+.wide-container{max-width:var(--wide);margin:0 auto;padding:0 1.5rem}
+
+/* ─── SECTIONS ──────────────────────────────────────── */
+.section{padding:5rem 0;border-bottom:1px solid rgba(13,15,20,0.07)}
+.section:last-child{border-bottom:none}
+
+.section-num{
+  font-family:var(--mono);font-size:0.75rem;font-weight:500;
+  color:var(--amber);letter-spacing:0.08em;
+  display:block;margin-bottom:0.75rem;
+}
+.section h2{
+  font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.8rem);
+  font-weight:700;line-height:1.2;color:var(--ink);
+  margin-bottom:1.5rem;letter-spacing:-0.02em;
+}
+.section h3{
+  font-family:var(--serif);font-size:1.4rem;font-weight:700;
+  color:var(--ink);margin:2.5rem 0 1rem;
+}
+.section p{margin-bottom:1.25rem;color:#2a2d3e;font-size:1rem}
+.section p:last-child{margin-bottom:0}
+
+/* ─── LEAD TEXT ─────────────────────────────────────── */
+.lead{
+  font-size:1.2rem;line-height:1.75;color:var(--ink);
+  font-weight:300;border-left:3px solid var(--amber);
+  padding-left:1.25rem;margin:2rem 0;
+}
+
+/* ─── CALLOUT BOXES ─────────────────────────────────── */
+.callout{
+  border-radius:12px;padding:1.5rem 1.75rem;margin:2rem 0;
+  border-left:4px solid;
+}
+.callout.amber{background:var(--amber-pale);border-color:var(--amber)}
+.callout.teal{background:var(--teal-pale);border-color:var(--teal)}
+.callout.purple{background:var(--purple-pale);border-color:var(--purple)}
+.callout.coral{background:var(--coral-pale);border-color:var(--coral)}
+.callout-title{
+  font-size:0.75rem;font-weight:600;letter-spacing:0.1em;
+  text-transform:uppercase;margin-bottom:0.5rem;
+  opacity:0.7;
+}
+.callout p{margin:0;font-size:0.95rem}
+
+/* ─── MATH DISPLAY ──────────────────────────────────── */
+.math-block{
+  background:var(--ink2);color:#e8e6f0;
+  border-radius:10px;padding:1.5rem 2rem;margin:1.5rem 0;
+  font-family:var(--mono);font-size:0.92rem;line-height:1.9;
+  overflow-x:auto;
+}
+.math-block .eq{display:block;text-align:center;font-size:1.05rem;letter-spacing:0.02em}
+.math-block .eq-label{font-size:0.75rem;color:rgba(255,255,255,0.35);text-align:right;margin-top:0.5rem}
+code{
+  font-family:var(--mono);font-size:0.85em;
+  background:rgba(13,15,20,0.07);padding:2px 6px;border-radius:4px;
+}
+
+/* ─── FIGURE WRAPPER ────────────────────────────────── */
+.fig{
+  margin:2.5rem 0;border-radius:14px;
+  overflow:hidden;border:1px solid rgba(13,15,20,0.08);
+  box-shadow:0 4px 24px rgba(13,15,20,0.06);
+}
+.fig-body{background:var(--paper2);padding:2rem}
+.fig-caption{
+  background:var(--ink);color:rgba(255,255,255,0.65);
+  padding:0.75rem 1.25rem;font-size:0.8rem;
+  border-top:1px solid rgba(255,255,255,0.05);
+}
+.fig-caption strong{color:rgba(255,255,255,0.9)}
+
+/* ─── PIXEL GRID DEMO ───────────────────────────────── */
+.pixel-grid{
+  display:grid;gap:3px;
+  width:fit-content;margin:0 auto;
+}
+.pixel-cell{
+  width:52px;height:52px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  border-radius:4px;cursor:pointer;transition:transform 0.15s;
+  border:1px solid rgba(0,0,0,0.08);
+}
+.pixel-cell:hover{transform:scale(1.08);z-index:2;position:relative}
+
+/* ─── RGB CHANNEL DISPLAY ───────────────────────────── */
+.channels-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:600px){.channels-grid{grid-template-columns:1fr}}
+.channel-card{
+  background:#fff;border-radius:12px;padding:1rem;
+  border:1px solid rgba(13,15,20,0.08);
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.channel-label{
+  font-size:0.75rem;font-weight:600;letter-spacing:0.08em;
+  text-transform:uppercase;margin-bottom:10px;
+}
+.ch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.ch-cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  border-radius:3px;
+}
+
+/* ─── FILTER VISUALIZER ─────────────────────────────── */
+.filter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
+.filter-tab{
+  padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;
+  cursor:pointer;border:1.5px solid rgba(13,15,20,0.12);
+  background:#fff;color:var(--ink);transition:all 0.2s;
+}
+.filter-tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.filter-display{display:grid;grid-template-columns:auto 1fr;gap:2rem;align-items:start}
+@media(max-width:600px){.filter-display{grid-template-columns:1fr}}
+.filter-grid{display:grid;grid-template-columns:repeat(3,56px);gap:3px}
+.filter-cell{
+  width:56px;height:56px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:13px;font-weight:600;border-radius:6px;
+}
+
+/* ─── STEP FLOW ─────────────────────────────────────── */
+.flow-steps{display:flex;flex-direction:column;gap:0;margin:2rem 0}
+.flow-step{
+  display:grid;grid-template-columns:60px 1fr;gap:1.25rem;
+  align-items:start;padding:1.5rem 0;
+  border-bottom:1px solid rgba(13,15,20,0.06);
+  opacity:0;transform:translateY(16px);
+  transition:opacity 0.5s ease, transform 0.5s ease;
+}
+.flow-step.visible{opacity:1;transform:translateY(0)}
+.flow-step:last-child{border-bottom:none}
+.step-num{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:0.85rem;font-weight:700;
+  flex-shrink:0;margin-top:3px;
+}
+.step-title{font-size:1rem;font-weight:600;margin-bottom:0.4rem}
+.step-desc{font-size:0.9rem;color:#4a4d5e;line-height:1.65;margin:0}
+
+/* ─── FEATURE HIERARCHY ─────────────────────────────── */
+.layer-row{
+  display:grid;grid-template-columns:100px 1fr;
+  gap:1rem;align-items:start;padding:1.25rem 0;
+  border-bottom:1px solid rgba(13,15,20,0.06);
+}
+.layer-row:last-child{border-bottom:none}
+.layer-badge{
+  padding:8px 12px;border-radius:8px;text-align:center;
+  font-size:0.8rem;font-weight:600;
+}
+.features-wrap{display:flex;flex-wrap:wrap;gap:6px;padding-top:4px}
+.feat-tag{
+  padding:4px 12px;border-radius:20px;
+  font-size:0.78rem;font-weight:500;
+  border:1px solid;
+}
+
+/* ─── MATH TABLE ────────────────────────────────────── */
+.param-table{width:100%;border-collapse:collapse;font-size:0.88rem;margin:1.25rem 0}
+.param-table th{
+  background:var(--ink);color:#fff;
+  padding:10px 14px;text-align:left;
+  font-family:var(--mono);font-size:0.78rem;letter-spacing:0.06em;font-weight:500;
+}
+.param-table th:first-child{border-radius:8px 0 0 0}
+.param-table th:last-child{border-radius:0 8px 0 0}
+.param-table td{
+  padding:10px 14px;border-bottom:1px solid rgba(13,15,20,0.06);
+  color:var(--ink);
+}
+.param-table tr:nth-child(even) td{background:rgba(13,15,20,0.02)}
+.param-table tr:last-child td{border-bottom:none}
+
+/* ─── POOLING DEMO ──────────────────────────────────── */
+.pool-grid{display:grid;gap:3px;width:fit-content}
+.pool-cell{
+  width:54px;height:54px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  border-radius:4px;transition:all 0.3s;
+}
+
+/* ─── FC DIAGRAM ────────────────────────────────────── */
+.fc-row{
+  display:grid;gap:1rem;margin:1.5rem 0;
+}
+.fc-card{
+  background:#fff;border-radius:12px;padding:1.25rem;
+  border:1px solid rgba(13,15,20,0.08);
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.fc-card-title{font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;opacity:0.6;margin-bottom:6px}
+.fc-card-val{font-size:1.5rem;font-weight:700;font-family:var(--mono)}
+
+/* ─── SOFTMAX BARS ──────────────────────────────────── */
+.softmax-row{display:flex;align-items:center;gap:12px;margin:8px 0}
+.softmax-class{width:60px;font-size:0.88rem;font-weight:600}
+.softmax-bar-wrap{flex:1;height:28px;background:rgba(13,15,20,0.05);border-radius:6px;overflow:hidden}
+.softmax-bar{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:0.8rem;font-weight:600;color:#fff;transition:width 1.2s cubic-bezier(0.34,1.56,0.64,1)}
+.softmax-pct{width:44px;text-align:right;font-family:var(--mono);font-size:0.85rem;font-weight:600}
+
+/* ─── TRAINING LOOP ─────────────────────────────────── */
+.training-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;margin:1.5rem 0;
+}
+.training-card{
+  background:#fff;border-radius:12px;padding:1.25rem;
+  border:1px solid rgba(13,15,20,0.08);
+  border-top:3px solid;
+}
+.training-card-num{font-family:var(--mono);font-size:1.5rem;font-weight:700;opacity:0.2;margin-bottom:0.5rem}
+.training-card-title{font-size:0.9rem;font-weight:600;margin-bottom:0.4rem}
+.training-card-desc{font-size:0.82rem;color:#4a4d5e;line-height:1.6}
+
+/* ─── ARCHITECTURE SUMMARY ──────────────────────────── */
+.arch-flow{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  background:var(--ink2);padding:1.5rem;border-radius:12px;
+  margin:1.5rem 0;
+}
+.arch-block{
+  padding:10px 16px;border-radius:8px;
+  font-family:var(--mono);font-size:0.8rem;font-weight:500;
+  text-align:center;white-space:nowrap;
+}
+.arch-arrow{color:rgba(255,255,255,0.3);font-size:1.2rem;flex-shrink:0}
+.arch-sub{font-size:0.65rem;opacity:0.6;display:block;margin-top:2px}
+
+/* ─── KEY TAKEAWAY ──────────────────────────────────── */
+.takeaway{
+  background:var(--ink);color:#fff;
+  border-radius:16px;padding:2.5rem;margin:2rem 0;
+}
+.takeaway h3{
+  font-family:var(--serif);font-size:1.5rem;
+  color:#fff;margin-bottom:1rem;
+}
+.takeaway p{color:rgba(255,255,255,0.7);font-size:0.95rem;margin-bottom:0.8rem}
+.takeaway p:last-child{margin-bottom:0}
+
+/* ─── CONCLUSION ────────────────────────────────────── */
+.conclusion{
+  background:var(--ink2);
+  padding:5rem 2rem;text-align:center;
+}
+.conclusion h2{
+  font-family:var(--serif);font-size:2.5rem;
+  color:#fff;margin-bottom:1.25rem;
+}
+.conclusion p{color:rgba(255,255,255,0.6);max-width:560px;margin:0 auto}
+
+/* ─── FOOTER ────────────────────────────────────────── */
+footer{
+  background:var(--ink);padding:2rem;text-align:center;
+  color:rgba(255,255,255,0.3);font-size:0.8rem;
+}
+
+/* ─── SCROLL REVEAL ─────────────────────────────────── */
+.reveal{
+  opacity:0;transform:translateY(20px);
+  transition:opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ─── TOC SIDEBAR ───────────────────────────────────── */
+.toc{
+  position:sticky;top:72px;
+  background:#fff;border-radius:12px;padding:1.25rem;
+  border:1px solid rgba(13,15,20,0.08);
+  box-shadow:0 2px 12px rgba(0,0,0,0.04);
+  font-size:0.82rem;
+}
+.toc-title{
+  font-size:0.72rem;font-weight:700;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--ink);opacity:0.4;
+  margin-bottom:0.75rem;
+}
+.toc a{
+  display:block;padding:5px 0;color:var(--ink);opacity:0.55;
+  text-decoration:none;transition:opacity 0.15s, padding-left 0.15s;
+  border-left:2px solid transparent;padding-left:8px;
+  line-height:1.4;
+}
+.toc a:hover,.toc a.active{
+  opacity:1;color:var(--amber);
+  border-left-color:var(--amber);
+}
+
+.main-grid{
+  display:grid;grid-template-columns:1fr 200px;
+  gap:3rem;max-width:1080px;margin:0 auto;padding:0 1.5rem;
+  align-items:start;
+}
+@media(max-width:900px){
+  .main-grid{grid-template-columns:1fr;max-width:var(--max)}
+  .sidebar{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <span class="nav-logo">CNN Explained</span>
+  <ul class="nav-links">
+    <li><a href="#section-input">Input</a></li>
+    <li><a href="#section-conv">Convolution</a></li>
+    <li><a href="#section-pooling">Pooling</a></li>
+    <li><a href="#section-layers">Layers</a></li>
+    <li><a href="#section-fc">Classifier</a></li>
+    <li><a href="#section-training">Training</a></li>
+  </ul>
+</nav>
+
+<!-- ═══ HERO ═══════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <span class="hero-tag">Deep Learning · Visual Guide</span>
+    <h1>How <em>Convolutional Neural Networks</em> Actually See the World</h1>
+    <p class="hero-sub">A complete first-principles walkthrough — from raw pixel numbers to confident predictions — with no prior deep learning knowledge required.</p>
+    <div class="hero-meta">
+      <span>⏱ 15 min read</span>
+      <span>🧠 Beginner friendly</span>
+      <span>📐 Math included</span>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span>scroll</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 5v14M5 12l7 7 7-7"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══ MAIN CONTENT ════════════════════════════════════ -->
+<div class="main-grid" style="margin-top:4rem">
+
+  <!-- Sidebar TOC -->
+  <aside class="sidebar">
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <a href="#section-intro">What is a CNN?</a>
+      <a href="#section-input">Images as Numbers</a>
+      <a href="#section-conv">Convolution</a>
+      <a href="#section-relu">ReLU Activation</a>
+      <a href="#section-pooling">Max Pooling</a>
+      <a href="#section-layers">Layer Hierarchy</a>
+      <a href="#section-fc">Fully Connected</a>
+      <a href="#section-training">Training</a>
+      <a href="#section-summary">Full Picture</a>
+    </div>
+  </aside>
+
+  <!-- Article -->
+  <article>
+
+    <!-- ── 0. INTRO ─────────────────────────────────── -->
+    <section class="section" id="section-intro">
+      <div>
+        <span class="section-num">00 — Introduction</span>
+        <h2>What is a Convolutional Neural Network?</h2>
+
+        <p class="lead">A CNN is a program that learns to recognize patterns in images — not by being told what to look for, but by seeing thousands of examples and figuring it out on its own.</p>
+
+        <p>When you look at a photo of a cat, your brain instantly processes edges, textures, shapes and assembles them into a coherent object. A computer, on the other hand, sees nothing but a grid of numbers. A Convolutional Neural Network (CNN) is the architecture that bridges that gap — it systematically transforms those raw numbers into meaningful visual understanding.</p>
+
+        <p>CNNs power the face unlock on your phone, the object detection in self-driving cars, the cancer detection in medical imaging, and image search across the web. Understanding how they work is one of the most rewarding journeys in modern technology.</p>
+
+        <div class="callout amber">
+          <div class="callout-title">🎯 What you'll learn</div>
+          <p>By the end of this article you'll understand every layer of a CNN — what it does, why it exists, and the mathematics behind it — well enough to explain it to someone else.</p>
+        </div>
+
+        <h3>The big picture: a CNN is an assembly line</h3>
+        <p>Think of a CNN as an assembly line of inspectors. The first inspector looks for simple things — edges and colors. The next combines those into shapes. The one after that assembles shapes into object parts. The final inspector makes the decision: "that's a cat."</p>
+
+        <div class="fig reveal">
+          <div class="fig-body">
+            <div class="arch-flow">
+              <div class="arch-block" style="background:rgba(83,74,183,0.3);color:#c4c0f8">
+                Input<br><span class="arch-sub">image</span>
+              </div>
+              <span class="arch-arrow">→</span>
+              <div class="arch-block" style="background:rgba(83,74,183,0.5);color:#d0cdfa">
+                Conv 1<br><span class="arch-sub">edges & colors</span>
+              </div>
+              <span class="arch-arrow">→</span>
+              <div class="arch-block" style="background:rgba(26,158,122,0.4);color:#a0f0d8">
+                Pool 1<br><span class="arch-sub">compress</span>
+              </div>
+              <span class="arch-arrow">→</span>
+              <div class="arch-block" style="background:rgba(83,74,183,0.5);color:#d0cdfa">
+                Conv 2<br><span class="arch-sub">shapes</span>
+              </div>
+              <span class="arch-arrow">→</span>
+              <div class="arch-block" style="background:rgba(26,158,122,0.4);color:#a0f0d8">
+                Pool 2<br><span class="arch-sub">compress</span>
+              </div>
+              <span class="arch-arrow">→</span>
+              <div class="arch-block" style="background:rgba(200,132,26,0.4);color:#f5c870">
+                FC<br><span class="arch-sub">decide</span>
+              </div>
+              <span class="arch-arrow">→</span>
+              <div class="arch-block" style="background:rgba(26,158,122,0.6);color:#fff">
+                Cat 94%
+              </div>
+            </div>
+          </div>
+          <div class="fig-caption"><strong>Figure 1.</strong> The full CNN pipeline — each stage builds on the previous one, adding more abstract understanding of the image.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 1. INPUT ─────────────────────────────────── -->
+    <section class="section" id="section-input">
+      <span class="section-num">01 — Input</span>
+      <h2>Images are Just Grids of Numbers</h2>
+
+      <p class="lead">A computer has no concept of "color" or "brightness" as we experience them. Every image is stored as a matrix of integers from 0 to 255 — and that's exactly what the CNN receives.</p>
+
+      <h3>Grayscale: one matrix</h3>
+      <p>In a grayscale image, every pixel is a single number: <code>0</code> = pure black, <code>255</code> = pure white, everything in between is a shade of gray. A 28×28 grayscale image (like handwritten digits) is literally a 28×28 matrix containing 784 numbers.</p>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <p style="text-align:center;font-size:0.85rem;color:#6a6d7e;margin-bottom:1rem">Hover any pixel to see its brightness value</p>
+          <div id="pixel-demo" style="display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;justify-content:center"></div>
+          <div id="pixel-info" style="text-align:center;margin-top:1rem;font-family:var(--mono);font-size:0.85rem;color:#6a6d7e;min-height:1.4em"></div>
+        </div>
+        <div class="fig-caption"><strong>Figure 2.</strong> Left: the image as we see it visually. Right: the exact same image as a matrix of numbers the CNN processes.</div>
+      </div>
+
+      <h3>Color images: three matrices stacked (RGB)</h3>
+      <p>Color images have three separate layers — called <strong>channels</strong>: Red, Green, and Blue. Each channel is its own full matrix of 0–255 values describing how much of that color is present at each pixel. The CNN receives all three simultaneously, forming a 3D block called a <strong>tensor</strong>.</p>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <div class="channels-grid" id="rgb-demo"></div>
+          <div style="margin-top:1.25rem;text-align:center;font-size:0.85rem;color:#6a6d7e">
+            Three separate matrices → combined → full color result
+          </div>
+        </div>
+        <div class="fig-caption"><strong>Figure 3.</strong> A color image is three stacked matrices. The CNN processes all three channels together.</div>
+      </div>
+
+      <div class="callout teal">
+        <div class="callout-title">📐 The math</div>
+        <p>A grayscale 32×32 image = <strong>32 × 32 × 1 = 1,024 numbers</strong>. A color 224×224 image (common in real CNNs) = <strong>224 × 224 × 3 = 150,528 numbers</strong>. That's the raw input the CNN starts with.</p>
+      </div>
+    </section>
+
+    <!-- ── 2. CONVOLUTION ───────────────────────────── -->
+    <section class="section" id="section-conv">
+      <span class="section-num">02 — Convolution</span>
+      <h2>The Convolution Operation</h2>
+
+      <p class="lead">Convolution is the heart of a CNN. A small grid of numbers called a <em>filter</em> slides across the image, and at each position it performs a dot product — multiplying its values with the image patch beneath it and summing everything up.</p>
+
+      <h3>The filter (kernel)</h3>
+      <p>A filter is a small matrix — typically 3×3 — containing learned numbers. Different filter values detect different visual patterns. Here are five classic examples:</p>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <div class="filter-tabs" id="filter-tabs"></div>
+          <div class="filter-display">
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px">Filter values</p>
+              <div class="filter-grid" id="filter-grid-display"></div>
+              <p style="font-size:0.78rem;color:#6a6d7e;margin-top:8px">Green = positive weight<br>Red = negative weight</p>
+            </div>
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px">What it detects</p>
+              <div id="filter-desc" style="font-size:0.9rem;line-height:1.7;color:var(--ink)"></div>
+              <div id="filter-effect" style="margin-top:1rem;padding:10px 14px;background:rgba(13,15,20,0.04);border-radius:8px;font-size:0.85rem;color:#4a4d5e;line-height:1.65"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fig-caption"><strong>Figure 4.</strong> Five common filter patterns. In real CNNs, filter values aren't hand-crafted like these — they're learned automatically from training data.</div>
+      </div>
+
+      <h3>The sliding dot product — step by step</h3>
+      <p>The filter slides across the image one position at a time. At each position, it multiplies its 9 values against the 9 image pixels beneath it, then sums the products. This produces a single output number. Repeat for every position → one complete <strong>feature map</strong>.</p>
+
+      <div class="math-block">
+        <span class="eq">Output[i, j] = Σ Σ  Filter[r, s] × Image[i+r, j+s]  +  bias</span>
+        <span class="eq" style="font-size:0.8rem;opacity:0.5">for r, s in {0,1,2}  (the 3×3 filter positions)</span>
+        <div class="eq-label">Convolution formula for one output value at position (i, j)</div>
+      </div>
+
+      <p>Let's work through one concrete calculation. Given the top-left 3×3 patch of an image and an edge-detection filter:</p>
+
+      <div class="fig reveal">
+        <div class="fig-body" id="conv-calc-demo">
+          <div style="display:flex;gap:2rem;align-items:center;flex-wrap:wrap;justify-content:center">
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px;text-align:center">Image patch</p>
+              <div style="display:grid;grid-template-columns:repeat(3,56px);gap:3px">
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">1</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">2</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">3</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">4</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">5</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">6</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">7</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">8</div>
+                <div class="filter-cell" style="background:#EEEDFE;color:#3C3489">9</div>
+              </div>
+            </div>
+            <div style="font-size:2rem;color:#aaa">×</div>
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px;text-align:center">Edge filter</p>
+              <div style="display:grid;grid-template-columns:repeat(3,56px);gap:3px">
+                <div class="filter-cell" style="background:#E1F5EE;color:#085041">1</div>
+                <div class="filter-cell" style="background:#f5f5f5;color:#999">0</div>
+                <div class="filter-cell" style="background:#FCEBEB;color:#791F1F">-1</div>
+                <div class="filter-cell" style="background:#E1F5EE;color:#085041">1</div>
+                <div class="filter-cell" style="background:#f5f5f5;color:#999">0</div>
+                <div class="filter-cell" style="background:#FCEBEB;color:#791F1F">-1</div>
+                <div class="filter-cell" style="background:#E1F5EE;color:#085041">1</div>
+                <div class="filter-cell" style="background:#f5f5f5;color:#999">0</div>
+                <div class="filter-cell" style="background:#FCEBEB;color:#791F1F">-1</div>
+              </div>
+            </div>
+            <div style="font-size:2rem;color:#aaa">=</div>
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px;text-align:center">Result</p>
+              <div style="width:80px;height:80px;background:#FAEEDA;border:2px solid var(--amber);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <span style="font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--amber)">-12</span>
+                <span style="font-size:0.7rem;color:#888">output</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:1.5rem;background:rgba(13,15,20,0.04);border-radius:8px;padding:1rem 1.25rem;font-family:var(--mono);font-size:0.82rem;line-height:2;color:#3a3d4e">
+            (1×1)+(2×0)+(3×-1) = -2<br>
+            (4×1)+(5×0)+(6×-1) = -2<br>
+            (7×1)+(8×0)+(9×-1) = -2<br>
+            <strong>Sum = -6 + bias(0) = -6</strong> → right side brighter than left = right-leaning edge
+          </div>
+        </div>
+        <div class="fig-caption"><strong>Figure 5.</strong> One convolution step. The −6 output means the right side of this patch is brighter — a vertical edge running right to left was detected.</div>
+      </div>
+
+      <h3>Multiple filters → multiple feature maps</h3>
+      <p>One convolution layer doesn't use just one filter — it uses many, typically 32 to 512. Each filter learns to detect something different. Every filter produces its own output grid (a feature map). Stack all those maps together and you get the layer's output: a 3D tensor.</p>
+
+      <div class="callout purple">
+        <div class="callout-title">🔑 Key insight</div>
+        <p>The filter values are <strong>not chosen by you</strong>. They start as random numbers and are gradually adjusted during training until each filter becomes a specialist detector for some useful visual pattern.</p>
+      </div>
+
+      <h3>Output size formula</h3>
+      <div class="math-block">
+        <span class="eq">Output size = ⌊ (Input size + 2×Padding − Filter size) ÷ Stride ⌋ + 1</span>
+        <span class="eq" style="font-size:0.82rem;opacity:0.55">Example: 32×32 input, 3×3 filter, stride=1, padding=0 → ⌊(32-3)/1⌋+1 = 30×30</span>
+      </div>
+
+      <p><strong>Stride</strong> controls how far the filter jumps each step (1 = maximum detail, 2 = halves output size). <strong>Padding</strong> adds a border of zeros around the image so the output stays the same size as the input — very common in practice.</p>
+    </section>
+
+    <!-- ── 3. RELU ───────────────────────────────────── -->
+    <section class="section" id="section-relu">
+      <span class="section-num">03 — Activation</span>
+      <h2>ReLU — The Simple Switch</h2>
+
+      <p class="lead">After every convolution, the output passes through an activation function. The most popular choice — by far — is ReLU (Rectified Linear Unit). It does exactly one thing: replace every negative number with zero.</p>
+
+      <div class="math-block">
+        <span class="eq">ReLU(x) = max(0, x)</span>
+        <span class="eq" style="font-size:0.82rem;opacity:0.55">5 → 5 &nbsp;|&nbsp; 12 → 12 &nbsp;|&nbsp; −3 → 0 &nbsp;|&nbsp; −8 → 0</span>
+      </div>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <div style="display:flex;gap:3rem;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px">Before ReLU</p>
+              <div id="relu-before" style="display:flex;gap:6px;flex-wrap:wrap;max-width:280px"></div>
+            </div>
+            <div style="font-size:2.5rem;color:#aaa;padding-top:30px">→</div>
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px">After ReLU: max(0, x)</p>
+              <div id="relu-after" style="display:flex;gap:6px;flex-wrap:wrap;max-width:280px"></div>
+            </div>
+          </div>
+          <p style="text-align:center;margin-top:1rem;font-size:0.85rem;color:#6a6d7e">Red cells = negative (killed). Green cells = positive (kept).</p>
+        </div>
+        <div class="fig-caption"><strong>Figure 6.</strong> ReLU removes all negative activations. Negatives usually mean "feature not found here" — keeping them would muddy the network's signal.</div>
+      </div>
+
+      <h3>Why does this matter so much?</h3>
+      <p>Without an activation function, stacking many layers of matrix multiplication would be mathematically equivalent to a single layer. ReLU introduces <strong>non-linearity</strong> — the ability to learn curved decision boundaries rather than just straight lines. It also makes training faster because its gradient is just 1 (for positive inputs) — no vanishing gradient problem.</p>
+    </section>
+
+    <!-- ── 4. POOLING ───────────────────────────────── -->
+    <section class="section" id="section-pooling">
+      <span class="section-num">04 — Pooling</span>
+      <h2>Max Pooling — Compress and Generalize</h2>
+
+      <p class="lead">After convolution + ReLU, the feature maps are still large. Max pooling shrinks them by scanning a small window and keeping only the maximum value in each region — discarding exact position but preserving signal strength.</p>
+
+      <h3>How it works</h3>
+      <p>A 2×2 max pool with stride 2 divides the feature map into non-overlapping 2×2 blocks and replaces each block with its single largest value. A 4×4 map becomes 2×2 — four times fewer numbers.</p>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <div style="display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px">Input 4×4</p>
+              <div class="pool-grid" id="pool-input" style="grid-template-columns:repeat(4,54px)"></div>
+            </div>
+            <div style="font-size:2rem;color:#aaa;padding-top:60px">→</div>
+            <div>
+              <p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px">Output 2×2 (max of each region)</p>
+              <div class="pool-grid" id="pool-output" style="grid-template-columns:repeat(2,70px)"></div>
+            </div>
+          </div>
+          <p style="text-align:center;margin-top:1rem;font-size:0.85rem;color:#6a6d7e">
+            Colors show the four 2×2 regions. The winner (maximum) from each region survives.
+          </p>
+        </div>
+        <div class="fig-caption"><strong>Figure 7.</strong> 2×2 max pooling reduces 16 numbers to 4, keeping only the strongest activation from each neighborhood.</div>
+      </div>
+
+      <div class="math-block">
+        <span class="eq">Output[i, j] = max( X[2i, 2j], X[2i, 2j+1], X[2i+1, 2j], X[2i+1, 2j+1] )</span>
+        <div class="eq-label">Max pooling with pool size 2×2, stride 2. Zero learnable parameters.</div>
+      </div>
+
+      <h3>Four reasons pooling exists</h3>
+      <div class="training-grid reveal">
+        <div class="training-card" style="border-color:var(--amber)">
+          <div class="training-card-num">01</div>
+          <div class="training-card-title">Translation invariance</div>
+          <div class="training-card-desc">A feature present anywhere in the 2×2 window still produces the same max. Exact pixel position stops mattering.</div>
+        </div>
+        <div class="training-card" style="border-color:var(--teal)">
+          <div class="training-card-num">02</div>
+          <div class="training-card-title">Dimensionality reduction</div>
+          <div class="training-card-desc">4× fewer numbers per layer. Every subsequent layer is 4× cheaper to compute and store.</div>
+        </div>
+        <div class="training-card" style="border-color:var(--purple)">
+          <div class="training-card-num">03</div>
+          <div class="training-card-title">Grows receptive field</div>
+          <div class="training-card-desc">After pooling, the next conv layer "sees" a larger region of the original image — enabling big-picture understanding.</div>
+        </div>
+        <div class="training-card" style="border-color:var(--coral)">
+          <div class="training-card-num">04</div>
+          <div class="training-card-title">Reduces overfitting</div>
+          <div class="training-card-desc">Fewer numbers in later layers = fewer weights to learn = the network generalizes instead of memorizing.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 5. LAYER HIERARCHY ───────────────────────── -->
+    <section class="section" id="section-layers">
+      <span class="section-num">05 — Depth</span>
+      <h2>Stacking Layers Builds Complexity</h2>
+
+      <p class="lead">Each convolution layer doesn't see the original image — it sees the output of the previous layer. This means later layers are automatically building on simpler features to detect more complex ones.</p>
+
+      <p>Layer 2's filters have shape <code>3×3×32</code> (not <code>3×3×3</code> like layer 1) — they reach through all 32 input feature maps at once. This lets them ask: <em>"Is there a vertical edge here AND a horizontal edge there, at this relative position?"</em> — which is exactly what a corner is.</p>
+
+      <div class="callout teal">
+        <div class="callout-title">💡 The combination principle</div>
+        <p>Each deeper layer's filters combine the previous layer's detectors in new spatial arrangements. Corner = vertical edge + horizontal edge meeting at a point. Curve = a sequence of edges arranged in an arc. Eye = curve above + circle + texture. The CNN discovers all of this automatically.</p>
+      </div>
+
+      <h3>Feature hierarchy in a trained CNN</h3>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <div id="layer-hierarchy"></div>
+        </div>
+        <div class="fig-caption"><strong>Figure 8.</strong> What real trained CNNs actually learn at each depth. No layer is told what to detect — the hierarchy emerges from training alone.</div>
+      </div>
+
+      <h3>The receptive field grows with depth</h3>
+      <p>Each neuron in layer 1 "sees" a 3×3 patch of the original image. But a neuron in layer 2 connects to a 3×3 patch of layer 1, and each of those neurons saw a 3×3 region — so layer 2 effectively sees a 5×5 patch of the original. By layer 5, a single neuron can respond to activity across a large portion of the entire image.</p>
+
+      <div class="math-block">
+        <span class="eq">Receptive field at layer L = 1 + L × (filter size − 1)</span>
+        <span class="eq" style="opacity:0.5;font-size:0.82rem">With 3×3 filters:  Layer 1 = 3×3  |  Layer 2 = 5×5  |  Layer 3 = 7×7  |  ...</span>
+        <span class="eq" style="opacity:0.5;font-size:0.82rem">With 2×2 max pooling added, the receptive field doubles at each pooling step.</span>
+      </div>
+
+      <h3>Parameter count grows with depth</h3>
+      <table class="param-table">
+        <thead>
+          <tr><th>Layer</th><th>Input shape</th><th>Filters</th><th>Filter shape</th><th>Parameters</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Conv 1</td><td>32×32×3</td><td>32</td><td>3×3×3</td><td>32 × (3×3×3 + 1) = <strong>896</strong></td></tr>
+          <tr><td>Conv 2</td><td>16×16×32</td><td>64</td><td>3×3×32</td><td>64 × (3×3×32 + 1) = <strong>18,496</strong></td></tr>
+          <tr><td>Conv 3</td><td>8×8×64</td><td>128</td><td>3×3×64</td><td>128 × (3×3×64 + 1) = <strong>73,856</strong></td></tr>
+          <tr><td>FC</td><td>4×4×128 = 2,048 flat</td><td>—</td><td>—</td><td>2,048 × 1,024 + 1,024 = <strong>2.1M</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── 6. FULLY CONNECTED ───────────────────────── -->
+    <section class="section" id="section-fc">
+      <span class="section-num">06 — Classification</span>
+      <h2>The Fully Connected Layer</h2>
+
+      <p class="lead">After the convolutional backbone extracts features, it hands off to a fundamentally different kind of layer — one where every single extracted feature potentially influences every output decision.</p>
+
+      <h3>Step 1: Flatten</h3>
+      <p>The 3D feature volume (height × width × depth) is "unrolled" into a single long 1D vector. No math — just reshaping. A 7×7×512 output becomes a vector of 25,088 numbers. This is the input to the first FC layer.</p>
+
+      <div class="fig reveal">
+        <div class="fig-body" style="text-align:center">
+          <div style="display:inline-flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center">
+            <div style="display:grid;grid-template-columns:repeat(4,32px);gap:2px">
+              <div style="width:32px;height:32px;background:#EEEDFE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#3C3489">7</div>
+              <div style="width:32px;height:32px;background:#EEEDFE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#3C3489">3</div>
+              <div style="width:32px;height:32px;background:#E1F5EE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#085041">9</div>
+              <div style="width:32px;height:32px;background:#E1F5EE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#085041">2</div>
+              <div style="width:32px;height:32px;background:#EEEDFE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#3C3489">5</div>
+              <div style="width:32px;height:32px;background:#EEEDFE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#3C3489">1</div>
+              <div style="width:32px;height:32px;background:#E1F5EE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#085041">8</div>
+              <div style="width:32px;height:32px;background:#E1F5EE;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:#085041">4</div>
+            </div>
+            <div style="font-size:0.85rem;color:#888">3D tensor<br>H×W×D</div>
+            <div style="font-size:2rem;color:#aaa">→ flatten →</div>
+            <div style="display:flex;gap:2px;flex-wrap:wrap;max-width:200px;justify-content:center">
+              <div style="width:22px;height:22px;background:#EEEDFE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#3C3489">7</div>
+              <div style="width:22px;height:22px;background:#EEEDFE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#3C3489">3</div>
+              <div style="width:22px;height:22px;background:#E1F5EE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#085041">9</div>
+              <div style="width:22px;height:22px;background:#E1F5EE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#085041">2</div>
+              <div style="width:22px;height:22px;background:#EEEDFE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#3C3489">5</div>
+              <div style="width:22px;height:22px;background:#EEEDFE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#3C3489">1</div>
+              <div style="width:22px;height:22px;background:#E1F5EE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#085041">8</div>
+              <div style="width:22px;height:22px;background:#E1F5EE;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:#085041">4</div>
+            </div>
+            <div style="font-size:0.85rem;color:#888">1D vector<br>N numbers</div>
+          </div>
+        </div>
+        <div class="fig-caption"><strong>Figure 9.</strong> Flattening reshapes the 3D tensor into a 1D vector — same numbers, different shape. No math, no learning.</div>
+      </div>
+
+      <h3>Step 2: The fully connected calculation</h3>
+      <p>Every input neuron connects to every output neuron through a learned weight. Each output neuron computes a weighted sum of all inputs, adds its bias, and applies ReLU:</p>
+
+      <div class="math-block">
+        <span class="eq">output_j = ReLU( Σᵢ wᵢⱼ × xᵢ + bⱼ )</span>
+        <span class="eq" style="opacity:0.55;font-size:0.82rem">where xᵢ = each input value,  wᵢⱼ = weight connecting input i to output j,  bⱼ = bias for output j</span>
+      </div>
+
+      <p>A fully connected layer with 25,088 inputs and 4,096 outputs has <strong>25,088 × 4,096 + 4,096 ≈ 102 million parameters</strong>. This is why FC layers dominate the total parameter count of classic CNNs like VGG.</p>
+
+      <h3>Step 3: Softmax — turning scores into probabilities</h3>
+      <p>The final FC layer produces one raw score (called a <strong>logit</strong>) per class. Softmax converts these into probabilities that all add up to 100%:</p>
+
+      <div class="math-block">
+        <span class="eq">P(class i) = e^(score_i) ÷ Σⱼ e^(score_j)</span>
+        <div class="eq-label">The exponential (eˣ) amplifies differences — the leading class dominates the probability.</div>
+      </div>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <p style="font-size:0.85rem;color:#6a6d7e;margin-bottom:1rem">Example: raw logit scores from the last FC layer → softmax probabilities</p>
+          <div id="softmax-demo"></div>
+        </div>
+        <div class="fig-caption"><strong>Figure 10.</strong> Softmax always produces values between 0 and 1 that sum to exactly 1. A score of 4.2 for "cat" vs 1.1 for "dog" gives a much larger probability difference than a ratio of 4.2/1.1 would suggest — because of the exponential.</div>
+      </div>
+    </section>
+
+    <!-- ── 7. TRAINING ──────────────────────────────── -->
+    <section class="section" id="section-training">
+      <span class="section-num">07 — Training</span>
+      <h2>How the CNN Learns</h2>
+
+      <p class="lead">Every weight — every single number in every filter, every FC connection — starts as a random value and gradually improves through a feedback loop repeated hundreds of thousands of times.</p>
+
+      <div class="flow-steps" id="training-steps">
+        <div class="flow-step">
+          <div class="step-num" style="background:#EEEDFE;color:#534AB7">01</div>
+          <div>
+            <div class="step-title">Forward pass</div>
+            <p class="step-desc">The image flows forward through every layer — conv, ReLU, pool, FC — producing a final prediction. All intermediate activations are saved for step 3.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#FAECE7;color:#993C1D">02</div>
+          <div>
+            <div class="step-title">Compute the loss</div>
+            <p class="step-desc">Compare the prediction to the correct label using a <strong>loss function</strong>. For classification: Loss = −log(P(correct class)). A confident correct answer → small loss. A confident wrong answer → huge loss.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#FAEEDA;color:#633806">03</div>
+          <div>
+            <div class="step-title">Backpropagation</div>
+            <p class="step-desc">Using the chain rule of calculus, compute the gradient ∂L/∂W for every weight — "if I nudge this weight up, does the loss go up or down?" This flows backward from the loss, through the FC layers, through pooling, through conv layers, all the way to the input.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#E1F5EE;color:#085041">04</div>
+          <div>
+            <div class="step-title">Gradient descent update</div>
+            <p class="step-desc">Nudge every weight in the direction that reduces the loss:</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="math-block">
+        <span class="eq">W_new = W_old − α × ∂L/∂W</span>
+        <span class="eq" style="opacity:0.55;font-size:0.82rem">α (learning rate) controls step size — too large = overshooting, too small = very slow convergence</span>
+        <div class="eq-label">Gradient descent — the core of all neural network learning</div>
+      </div>
+
+      <div class="flow-steps" id="training-steps2">
+        <div class="flow-step">
+          <div class="step-num" style="background:#EEEDFE;color:#534AB7">05</div>
+          <div>
+            <div class="step-title">Repeat for every training example</div>
+            <p class="step-desc">Show the next image, repeat steps 1–4. After seeing millions of labeled images, each filter's weights settle into patterns that reliably detect useful visual features. The filter that started as random noise becomes a sharp edge detector, a curve finder, an eye recognizer — purely by reducing the loss.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="takeaway reveal">
+        <h3>Why this is remarkable</h3>
+        <p>Nobody told the CNN that edges are useful. Nobody told it that corners are made of edges, or that eyes are made of corners. It discovered the entire feature hierarchy on its own, purely from the pressure of getting predictions right.</p>
+        <p>When you visualize trained CNN filters, they look exactly like edge detectors, Gabor filters, and blob detectors that computer vision researchers spent decades designing by hand — the CNN rediscovered all of them from first principles.</p>
+      </div>
+    </section>
+
+    <!-- ── 8. SUMMARY ───────────────────────────────── -->
+    <section class="section" id="section-summary">
+      <span class="section-num">08 — Summary</span>
+      <h2>The Complete Picture</h2>
+
+      <p>Let's trace one image all the way through a CNN, end to end:</p>
+
+      <div class="fig reveal">
+        <div class="fig-body">
+          <div id="full-pipeline"></div>
+        </div>
+        <div class="fig-caption"><strong>Figure 11.</strong> Complete CNN pipeline with shapes and roles at each stage.</div>
+      </div>
+
+      <h3>Every operation in one place</h3>
+      <div class="flow-steps" id="summary-steps">
+        <div class="flow-step">
+          <div class="step-num" style="background:#E6F1FB;color:#185FA5">1</div>
+          <div><div class="step-title">Input image</div><p class="step-desc">Stored as H × W × C numbers (0–255 per channel). Divide by 255 to normalize to 0–1 range before feeding in.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#EEEDFE;color:#534AB7">2</div>
+          <div><div class="step-title">Convolution</div><p class="step-desc">N filters of shape K×K×C_in slide across the input. Each produces one feature map. Output: H′ × W′ × N. Parameters: (K×K×C_in + 1) × N.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#E1F5EE;color:#085041">3</div>
+          <div><div class="step-title">ReLU activation</div><p class="step-desc">max(0, x) applied element-wise. No parameters. Introduces non-linearity so the network can learn complex patterns.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#FAEEDA;color:#633806">4</div>
+          <div><div class="step-title">Max pooling</div><p class="step-desc">Slide a 2×2 window, keep the maximum. Halves spatial dimensions. Adds translation invariance. No parameters.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#EEEDFE;color:#534AB7">5</div>
+          <div><div class="step-title">Repeat Conv + ReLU + Pool</div><p class="step-desc">Each new conv layer detects combinations of the previous layer's features. Complexity compounds: edges → corners → shapes → parts → objects.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#FAECE7;color:#712B13">6</div>
+          <div><div class="step-title">Flatten</div><p class="step-desc">Unroll the 3D feature volume into a 1D vector. No math — just reshaping. This connects the feature extractor to the classifier.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#EAF3DE;color:#27500A">7</div>
+          <div><div class="step-title">Fully connected layers</div><p class="step-desc">Every feature connects to every output. Learns which combinations of extracted features correspond to each class. Output_j = ReLU(Σ wᵢⱼ xᵢ + bⱼ).</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num" style="background:#E1F5EE;color:#085041">8</div>
+          <div><div class="step-title">Softmax output</div><p class="step-desc">Converts raw scores into probabilities summing to 100%. The class with the highest probability is the prediction.</p></div>
+        </div>
+      </div>
+
+      <div class="callout amber">
+        <div class="callout-title">🏆 The key insight to remember</div>
+        <p>A CNN is fundamentally a hierarchy of learned pattern detectors. Each layer's filters combine the previous layer's outputs in new spatial arrangements, building up from simple edges to complex objects — all discovered automatically from labeled examples and gradient descent. No human ever needs to define what an edge is, what a corner is, or what a face is. The network figures it all out on its own.</p>
+      </div>
+    </section>
+
+  </article>
+</div>
+
+<!-- ═══ CONCLUSION ══════════════════════════════════════ -->
+<section class="conclusion">
+  <div style="max-width:640px;margin:0 auto">
+    <h2>You now understand CNNs — from pixels to predictions.</h2>
+    <p style="margin-bottom:1.5rem">Every layer has a clear job. Every operation has clean mathematics. And the whole system learns by itself, simply by trying to reduce a number that measures how wrong it was.</p>
+    <p>The same principles explored here power the most sophisticated visual AI systems in the world — scaled up with more layers, more filters, skip connections, and billions of training examples. But the core idea? It's exactly what you just read.</p>
+  </div>
+</section>
+
+<footer>
+  <p>A visual introduction to Convolutional Neural Networks. Built with HTML, CSS &amp; JavaScript.</p>
+</footer>
+
+<!-- ═══ JAVASCRIPT ═══════════════════════════════════════ -->
+<script>
+/* ── PROGRESS BAR ──────────────────────────────── */
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const p = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  document.getElementById('progress').style.width = p + '%';
+});
+
+/* ── TOC ACTIVE ────────────────────────────────── */
+const sections = document.querySelectorAll('section[id]');
+const tocLinks = document.querySelectorAll('.toc a');
+const observer2 = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting) {
+      tocLinks.forEach(a => a.classList.remove('active'));
+      const active = document.querySelector(`.toc a[href="#${e.target.id}"]`);
+      if(active) active.classList.add('active');
+    }
+  });
+}, {rootMargin:'-40% 0px -55% 0px'});
+sections.forEach(s => observer2.observe(s));
+
+/* ── SCROLL REVEAL ─────────────────────────────── */
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold:0.12});
+document.querySelectorAll('.reveal,.flow-step').forEach(el => revealObs.observe(el));
+
+/* ── PIXEL GRID DEMO ───────────────────────────── */
+const pixelData = [
+  [20,40,90,180,220],
+  [30,60,120,200,230],
+  [15,50,140,210,225],
+  [25,70,160,195,240],
+  [35,80,130,185,210]
+];
+function buildPixelDemo() {
+  const wrap = document.getElementById('pixel-demo');
+  const info = document.getElementById('pixel-info');
+  const toGray = v => `rgb(${v},${v},${v})`;
+  const textC = v => v < 130 ? '#eee' : '#222';
+
+  ['Visual image','Matrix of numbers'].forEach((title, idx) => {
+    const col = document.createElement('div');
+    col.innerHTML = `<p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:8px;text-align:center">${title}</p>`;
+    const grid = document.createElement('div');
+    grid.className = 'pixel-grid';
+    grid.style.gridTemplateColumns = 'repeat(5, 52px)';
+    pixelData.forEach((row, r) => row.forEach((v, c) => {
+      const cell = document.createElement('div');
+      cell.className = 'pixel-cell';
+      cell.style.background = toGray(v);
+      if(idx === 1) { cell.style.color = textC(v); cell.style.fontFamily = "var(--mono)"; cell.textContent = v; }
+      cell.addEventListener('mouseenter', () => {
+        info.textContent = `Row ${r+1}, Col ${c+1} → pixel value = ${v} → ${Math.round(v/255*100)}% white`;
+      });
+      cell.addEventListener('mouseleave', () => { info.textContent = ''; });
+      grid.appendChild(cell);
+    }));
+    col.appendChild(grid);
+    wrap.appendChild(col);
+  });
+}
+buildPixelDemo();
+
+/* ── RGB DEMO ──────────────────────────────────── */
+const rgbData = {
+  r:[[230,180,40,20],[200,160,30,15],[120,80,20,10],[60,30,10,5]],
+  g:[[50,120,180,200],[40,100,160,190],[20,60,130,170],[10,30,80,140]],
+  b:[[20,30,40,220],[15,25,35,200],[10,20,30,180],[5,15,25,160]]
+};
+function buildRGB() {
+  const wrap = document.getElementById('rgb-demo');
+  const defs = [
+    {key:'r', label:'Red channel', fn:(r,g,b)=>`rgb(${r},0,0)`, textFn:v=>v>100?'#600':'#f88'},
+    {key:'g', label:'Green channel', fn:(r,g,b)=>`rgb(0,${g},0)`, textFn:v=>v>100?'#060':'#4d4'},
+    {key:'b', label:'Blue channel', fn:(r,g,b)=>`rgb(0,0,${b})`, textFn:v=>v>100?'#006':'#88f'}
+  ];
+  defs.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'channel-card';
+    card.innerHTML = `<div class="channel-label" style="color:${d.textFn(200)}">${d.label}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'ch-grid';
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+      const rv=rgbData.r[r][c], gv=rgbData.g[r][c], bv=rgbData.b[r][c];
+      const v = d.key==='r'?rv:d.key==='g'?gv:bv;
+      const cell = document.createElement('div');
+      cell.className = 'ch-cell';
+      cell.style.background = d.fn(rv,gv,bv);
+      cell.style.color = d.textFn(v);
+      cell.style.fontFamily = 'var(--mono)';
+      cell.style.fontSize = '10px';
+      cell.textContent = v;
+      grid.appendChild(cell);
+    }
+    card.appendChild(grid);
+    card.innerHTML += `<p style="font-size:0.78rem;color:#888;margin-top:8px;line-height:1.5">How much ${d.key.toUpperCase()} is in each pixel</p>`;
+    card.appendChild(grid);
+    wrap.appendChild(card);
+  });
+}
+buildRGB();
+
+/* ── FILTER EXPLORER ───────────────────────────── */
+const filterData = [
+  {name:'Vertical edge', vals:[1,0,-1,1,0,-1,1,0,-1], desc:'Left column = +1, right = −1. High output where left is brighter than right — a vertical edge. High negative output for the reverse. Near-zero output where brightness is uniform.', effect:'Produces bright lines along vertical edges, dark lines along reversed edges, and zero where the image is flat.'},
+  {name:'Horizontal edge', vals:[1,1,1,0,0,0,-1,-1,-1], desc:'Top row = +1, bottom = −1. Fires strongly along horizontal transitions from light to dark going downward.', effect:'Bright response at top-edge of dark-on-light transitions. Used in combination with the vertical filter to detect corners.'},
+  {name:'Diagonal', vals:[1,0,-1,0,0,0,-1,0,1], desc:'Detects diagonal edges from top-left to bottom-right. The +1 and −1 corners pick up contrast across the diagonal axis.', effect:'Responds to diagonal lines and 45° edges. Combined with horizontal and vertical filters to build corner and texture detectors.'},
+  {name:'Blur / smooth', vals:[1,1,1,1,1,1,1,1,1], desc:'All values equal (= 1/9 when normalized). Every neighbor contributes equally. This computes the average brightness of the 3×3 neighborhood.', effect:'Produces a smoothed, blurred output. Edges and fine details are softened. Useful for denoising and as a preprocessing step.'},
+  {name:'Sharpen', vals:[0,-1,0,-1,5,-1,0,-1,0], desc:'Center = 5, direct neighbors = −1. Amplifies the center pixel relative to its neighbors — emphasizing differences and making edges pop.', effect:'Output has sharper, more pronounced edges and textures. Flat regions are unchanged. The mathematical opposite of blurring.'}
+];
+let activeFilter = 0;
+function buildFilterExplorer() {
+  const tabs = document.getElementById('filter-tabs');
+  filterData.forEach((f,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-tab' + (i===0?' active':'');
+    btn.textContent = f.name;
+    btn.onclick = () => { activeFilter=i; document.querySelectorAll('.filter-tab').forEach((b,j)=>b.classList.toggle('active',j===i)); renderFilter(); };
+    tabs.appendChild(btn);
+  });
+  renderFilter();
+}
+function cellBgFilter(v) {
+  if(v>0) return `rgba(26,158,122,${Math.min(v/5*0.8+0.15,1)})`;
+  if(v<0) return `rgba(217,95,56,${Math.min(-v/5*0.8+0.15,1)})`;
+  return '#f0eeea';
+}
+function cellColorFilter(v) { return v>0?'#085041':v<0?'#6b2010':'#999'; }
+function renderFilter() {
+  const f = filterData[activeFilter];
+  const g = document.getElementById('filter-grid-display');
+  g.innerHTML='';
+  f.vals.forEach(v => {
+    const d=document.createElement('div');
+    d.className='filter-cell';
+    d.style.background=cellBgFilter(v);
+    d.style.color=cellColorFilter(v);
+    d.textContent=v;
+    g.appendChild(d);
+  });
+  document.getElementById('filter-desc').textContent=f.desc;
+  document.getElementById('filter-effect').textContent='Effect: '+f.effect;
+}
+buildFilterExplorer();
+
+/* ── RELU DEMO ─────────────────────────────────── */
+const reluVals = [-6, 8, -3, 12, -1, 5, 9, -4, 7, -2, 3, 11];
+function buildReLU() {
+  const before = document.getElementById('relu-before');
+  const after = document.getElementById('relu-after');
+  reluVals.forEach(v => {
+    const d1=document.createElement('div'),d2=document.createElement('div');
+    const baseStyle='width:52px;height:52px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:600;border:1px solid rgba(0,0,0,0.08)';
+    d1.style.cssText=baseStyle;d2.style.cssText=baseStyle;
+    if(v>0){d1.style.background='#E1F5EE';d1.style.color='#085041';}
+    else{d1.style.background='#FCEBEB';d1.style.color='#791F1F';}
+    d1.textContent=v;before.appendChild(d1);
+    const rv=Math.max(0,v);
+    if(rv>0){d2.style.background='#E1F5EE';d2.style.color='#085041';}
+    else{d2.style.background='rgba(13,15,20,0.05)';d2.style.color='#aaa';}
+    d2.textContent=rv;after.appendChild(d2);
+  });
+}
+buildReLU();
+
+/* ── POOLING DEMO ──────────────────────────────── */
+const poolInput=[[9,3,8,1],[5,7,4,6],[1,4,5,3],[3,6,2,7]];
+const regionColors=[['#EEEDFE','#3C3489'],['#E1F5EE','#085041'],['#FAEEDA','#633806'],['#FAECE7','#712B13']];
+function buildPooling() {
+  const ingrid=document.getElementById('pool-input');
+  const outgrid=document.getElementById('pool-output');
+  const regionOf=(r,c) => Math.floor(r/2)*2+Math.floor(c/2);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+    const ri=regionOf(r,c);
+    const d=document.createElement('div');
+    d.className='pool-cell';
+    d.style.background=regionColors[ri][0];d.style.color=regionColors[ri][1];
+    d.style.border=`1px solid ${regionColors[ri][1]}44`;
+    d.textContent=poolInput[r][c];
+    ingrid.appendChild(d);
+  }
+  const maxes=[Math.max(9,3,5,7),Math.max(8,1,4,6),Math.max(1,4,3,6),Math.max(5,3,2,7)];
+  const labels=['max(9,3,5,7)','max(8,1,4,6)','max(1,4,3,6)','max(5,3,2,7)'];
+  maxes.forEach((m,i) => {
+    const d=document.createElement('div');
+    d.className='pool-cell';
+    d.style.cssText=`width:70px;height:70px;background:${regionColors[i][0]};color:${regionColors[i][1]};border:2px solid ${regionColors[i][1]};flex-direction:column;font-size:12px;`;
+    d.innerHTML=`<span style="font-size:20px;font-weight:700">${m}</span><span style="font-size:9px;opacity:0.6;margin-top:2px">${labels[i]}</span>`;
+    outgrid.appendChild(d);
+  });
+}
+buildPooling();
+
+/* ── LAYER HIERARCHY ───────────────────────────── */
+const layerDefs=[
+  {label:'Layer 1',badge:'#EEEDFE',labelC:'#3C3489',feats:['vertical edges','horizontal edges','diagonal edges','color blobs','bright spots'],tagBg:'#EEEDFE',tagC:'#3C3489',tagBorder:'#AFA9EC'},
+  {label:'Layer 2',badge:'#E1F5EE',labelC:'#085041',feats:['corners','curves','circles','gratings','textures','line endings'],tagBg:'#E1F5EE',tagC:'#085041',tagBorder:'#5DCAA5'},
+  {label:'Layer 3',badge:'#FAEEDA',labelC:'#633806',feats:['fur patches','eye shapes','wheel arcs','leaf patterns','grid structures','snouts'],tagBg:'#FAEEDA',tagC:'#633806',tagBorder:'#EF9F27'},
+  {label:'Layer 4+',badge:'#FAECE7',labelC:'#712B13',feats:['cat faces','car fronts','human figures','tree canopies','dog ears','bird wings'],tagBg:'#FAECE7',tagC:'#712B13',tagBorder:'#F0997B'}
+];
+function buildHierarchy() {
+  const wrap=document.getElementById('layer-hierarchy');
+  layerDefs.forEach(l => {
+    const row=document.createElement('div');
+    row.className='layer-row';
+    const badge=document.createElement('div');
+    badge.className='layer-badge';
+    badge.style.cssText=`background:${l.badge};color:${l.labelC}`;
+    badge.textContent=l.label;
+    const feats=document.createElement('div');
+    feats.className='features-wrap';
+    l.feats.forEach(f => {
+      const tag=document.createElement('span');
+      tag.className='feat-tag';
+      tag.style.cssText=`background:${l.tagBg};color:${l.tagC};border-color:${l.tagBorder}`;
+      tag.textContent=f;
+      feats.appendChild(tag);
+    });
+    row.appendChild(badge);row.appendChild(feats);
+    wrap.appendChild(row);
+  });
+}
+buildHierarchy();
+
+/* ── SOFTMAX DEMO ──────────────────────────────── */
+const softmaxData=[
+  {cls:'cat',score:4.2,color:'#1D9E75'},
+  {cls:'dog',score:1.1,color:'#534AB7'},
+  {cls:'car',score:-0.3,color:'#BA7517'},
+  {cls:'bird',score:0.8,color:'#D85A30'},
+  {cls:'fish',score:-1.2,color:'#185FA5'}
+];
+function softmax(scores){const exps=scores.map(Math.exp);const sum=exps.reduce((a,b)=>a+b);return exps.map(e=>e/sum);}
+function buildSoftmax(){
+  const wrap=document.getElementById('softmax-demo');
+  const probs=softmax(softmaxData.map(d=>d.score));
+  wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start"><div><p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:12px">Raw logit scores</p></div><div><p style="font-size:0.8rem;color:#6a6d7e;margin-bottom:12px">Softmax probabilities</p></div></div>';
+  const left=document.createElement('div');
+  const right=document.createElement('div');
+  softmaxData.forEach((d,i)=>{
+    const lr=document.createElement('div');lr.style.cssText='display:flex;align-items:center;gap:10px;margin:8px 0';
+    lr.innerHTML=`<span style="width:44px;font-size:0.85rem;font-weight:600">${d.cls}</span><span style="font-family:var(--mono);font-size:1rem;font-weight:700;color:${d.color}">${d.score}</span>`;
+    left.appendChild(lr);
+    const rr=document.createElement('div');rr.className='softmax-row';
+    const pct=Math.round(probs[i]*100);
+    rr.innerHTML=`<span class="softmax-class">${d.cls}</span><div class="softmax-bar-wrap"><div class="softmax-bar" style="width:0%;background:${d.color};"><span>${pct>8?pct+'%':''}</span></div></div><span class="softmax-pct" style="color:${d.color}">${pct}%</span>`;
+    right.appendChild(rr);
+  });
+  const grid=wrap.querySelector('div');
+  grid.children[0].appendChild(left);
+  grid.children[1].appendChild(right);
+  setTimeout(()=>{
+    document.querySelectorAll('.softmax-bar').forEach((b,i)=>{
+      b.style.width=(Math.round(probs[i]*100))+'%';
+    });
+  },600);
+}
+buildSoftmax();
+
+/* ── FULL PIPELINE ─────────────────────────────── */
+function buildPipeline(){
+  const wrap=document.getElementById('full-pipeline');
+  const stages=[
+    {label:'Input',sub:'H×W×3',bg:'rgba(24,95,165,0.15)',c:'#185FA5'},
+    {label:'Conv 1\n+ReLU',sub:'H×W×32',bg:'rgba(83,74,183,0.15)',c:'#534AB7'},
+    {label:'Pool 1',sub:'H/2×W/2×32',bg:'rgba(26,158,122,0.15)',c:'#1D9E75'},
+    {label:'Conv 2\n+ReLU',sub:'H/2×W/2×64',bg:'rgba(83,74,183,0.2)',c:'#534AB7'},
+    {label:'Pool 2',sub:'H/4×W/4×64',bg:'rgba(26,158,122,0.2)',c:'#1D9E75'},
+    {label:'Flatten',sub:'N numbers',bg:'rgba(186,117,23,0.15)',c:'#BA7517'},
+    {label:'FC +ReLU',sub:'4096 nodes',bg:'rgba(217,95,56,0.15)',c:'#D95F38'},
+    {label:'Softmax',sub:'C probs',bg:'rgba(26,158,122,0.25)',c:'#1D9E75'},
+  ];
+  const flow=document.createElement('div');
+  flow.style.cssText='display:flex;flex-wrap:wrap;gap:4px;align-items:center;background:var(--ink2);padding:1.5rem;border-radius:12px';
+  stages.forEach((s,i)=>{
+    const b=document.createElement('div');
+    b.style.cssText=`padding:10px 14px;border-radius:8px;background:${s.bg};border:1px solid ${s.c}44;text-align:center;`;
+    b.innerHTML=`<div style="font-size:0.8rem;font-weight:600;color:${s.c};font-family:var(--mono);white-space:pre">${s.label}</div><div style="font-size:0.68rem;color:rgba(255,255,255,0.45);margin-top:3px">${s.sub}</div>`;
+    flow.appendChild(b);
+    if(i<stages.length-1){
+      const arr=document.createElement('span');
+      arr.style.cssText='color:rgba(255,255,255,0.25);font-size:1.2rem;flex-shrink:0';
+      arr.textContent='→';
+      flow.appendChild(arr);
+    }
+  });
+  wrap.appendChild(flow);
+}
+buildPipeline();
+
+</script>
+</body>
+</html>
