@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN Math Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d12;--bg2:#111318;--bg3:#161920;--bg4:#1c1f28;
+  --border:#ffffff0f;--border2:#ffffff1a;
+  --teal:#00d4aa;--teal2:#00ffcc;--teal-dim:#00d4aa22;
+  --amber:#f5a623;--amber-dim:#f5a62220;
+  --coral:#ff6b6b;--coral-dim:#ff6b6b20;
+  --purple:#a78bfa;--purple-dim:#a78bfa20;
+  --blue:#60a5fa;--blue-dim:#60a5fa20;
+  --green:#4ade80;--green-dim:#4ade8020;
+  --text:#e8eaf0;--text2:#9099b0;--text3:#5a6070;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --radius:10px;
+}
+html{font-size:16px;height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--sans);
+  display:grid;grid-template-columns:280px 1fr;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── SIDEBAR ─────────────────────────────────── */
+#sidebar{
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  display:flex;flex-direction:column;
+  scrollbar-width:thin;scrollbar-color:var(--border2) transparent;
+}
+.sidebar-header{
+  padding:1.5rem 1.25rem 1rem;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.sidebar-title{
+  font-family:var(--mono);font-size:0.78rem;font-weight:600;
+  color:var(--teal);letter-spacing:0.12em;text-transform:uppercase;
+  margin-bottom:4px;
+}
+.sidebar-sub{font-size:0.78rem;color:var(--text3);line-height:1.4}
+.sidebar-progress{
+  margin-top:12px;height:3px;background:var(--border2);border-radius:3px;
+}
+.sidebar-progress-fill{
+  height:100%;background:var(--teal);border-radius:3px;
+  transition:width 0.4s ease;
+}
+.step-nav{padding:0.75rem 0;flex:1}
+.step-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 1.25rem;cursor:pointer;
+  transition:background 0.15s;border-left:3px solid transparent;
+  position:relative;
+}
+.step-item:hover{background:rgba(255,255,255,0.03)}
+.step-item.active{
+  background:var(--teal-dim);border-left-color:var(--teal);
+}
+.step-dot{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:0.7rem;font-weight:600;
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text3);transition:all 0.2s;
+}
+.step-item.active .step-dot{
+  background:var(--teal);color:var(--bg);border-color:var(--teal);
+}
+.step-item.done .step-dot{
+  background:var(--bg3);border-color:var(--teal);color:var(--teal);
+}
+.step-label{font-size:0.8rem;color:var(--text2);line-height:1.3}
+.step-item.active .step-label{color:var(--text)}
+
+/* ── MAIN CONTENT ────────────────────────────── */
+#main{
+  overflow-y:auto;height:100vh;
+  display:flex;flex-direction:column;
+}
+.step-content{
+  display:none;flex:1;
+  padding:2.5rem 2.5rem 2rem;
+  max-width:900px;width:100%;
+  animation:fadeIn 0.3s ease;
+}
+.step-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.step-header{margin-bottom:2rem}
+.step-number{
+  font-family:var(--mono);font-size:0.72rem;font-weight:600;
+  color:var(--teal);letter-spacing:0.14em;text-transform:uppercase;
+  margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.step-number::after{content:'';flex:1;height:1px;background:var(--border2)}
+.step-title{
+  font-size:1.9rem;font-weight:600;letter-spacing:-0.02em;
+  line-height:1.2;margin-bottom:0.75rem;
+}
+.step-intro{font-size:0.95rem;color:var(--text2);line-height:1.7;max-width:680px}
+
+/* ── FORMULA DISPLAY ─────────────────────────── */
+.formula-box{
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:1.25rem 1.5rem;
+  margin:1.5rem 0;font-family:var(--mono);
+}
+.formula-label{
+  font-size:0.68rem;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--teal);margin-bottom:0.6rem;
+}
+.formula-main{
+  font-size:1.1rem;color:var(--text);line-height:1.8;
+}
+.formula-note{font-size:0.8rem;color:var(--text3);margin-top:0.5rem;line-height:1.6}
+.hl-teal{color:var(--teal)}
+.hl-amber{color:var(--amber)}
+.hl-coral{color:var(--coral)}
+.hl-purple{color:var(--purple)}
+.hl-blue{color:var(--blue)}
+.hl-green{color:var(--green)}
+
+/* ── INTERACTIVE PANELS ──────────────────────── */
+.panel{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.25rem 1.5rem;margin:1.25rem 0;
+}
+.panel-title{
+  font-size:0.72rem;font-weight:600;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text3);margin-bottom:1rem;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title::before{content:'';width:3px;height:12px;background:var(--amber);border-radius:2px}
+
+/* ── GRID CELLS ──────────────────────────────── */
+.cell{
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:0.85rem;font-weight:500;
+  border-radius:6px;border:1px solid var(--border2);
+  background:var(--bg4);color:var(--text2);
+  transition:all 0.2s;cursor:default;
+  user-select:none;
+}
+.cell.highlight{background:rgba(0,212,170,0.15);border-color:var(--teal);color:var(--teal)}
+.cell.winner{background:rgba(0,212,170,0.25);border-color:var(--teal);color:var(--teal2);font-weight:700}
+.cell.pos{background:rgba(74,222,128,0.12);border-color:var(--green);color:var(--green)}
+.cell.neg{background:rgba(255,107,107,0.12);border-color:var(--coral);color:var(--coral)}
+.cell.zero{background:var(--bg4);color:var(--text3)}
+.cell.active-conv{background:rgba(167,139,250,0.2);border-color:var(--purple);color:var(--purple)}
+.cell.filter-cell{background:var(--bg2);border-color:var(--border2)}
+.cell.editable{cursor:pointer;border-style:dashed}
+.cell.editable:hover{border-color:var(--amber);color:var(--amber)}
+.g3{display:grid;grid-template-columns:repeat(3,52px);gap:3px}
+.g4{display:grid;grid-template-columns:repeat(4,52px);gap:3px}
+.g5{display:grid;grid-template-columns:repeat(5,52px);gap:3px}
+.g-cell-3{width:52px;height:52px}
+.g-cell-4{width:52px;height:52px}
+.g-cell-5{width:52px;height:52px}
+
+/* ── MATH BREAKDOWN ──────────────────────────── */
+.calc-row{
+  display:flex;align-items:center;gap:8px;padding:6px 0;
+  border-bottom:1px solid var(--border);font-family:var(--mono);font-size:0.82rem;
+}
+.calc-row:last-child{border-bottom:none;padding-top:10px;font-weight:600}
+.calc-op{color:var(--text3);min-width:16px;text-align:center}
+.calc-patch{color:var(--purple)}
+.calc-filter{color:var(--teal)}
+.calc-eq{color:var(--text3)}
+.calc-result{color:var(--amber);min-width:40px;text-align:right}
+.calc-sum{color:var(--green)}
+
+/* ── BUTTONS ──────────────────────────────────── */
+.btn{
+  padding:8px 18px;border-radius:8px;font-size:0.82rem;font-weight:600;
+  cursor:pointer;border:none;transition:all 0.15s;
+  font-family:var(--sans);
+}
+.btn-primary{background:var(--teal);color:var(--bg)}
+.btn-primary:hover{background:var(--teal2)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+.btn-sm{padding:5px 12px;font-size:0.78rem}
+
+/* ── SLIDERS ──────────────────────────────────── */
+input[type=range]{
+  -webkit-appearance:none;height:4px;border-radius:4px;
+  background:var(--border2);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;
+  border-radius:50%;background:var(--teal);cursor:pointer;
+  border:2px solid var(--bg);
+}
+input[type=number]{
+  background:var(--bg4);border:1px solid var(--border2);
+  color:var(--text);font-family:var(--mono);font-size:0.85rem;
+  padding:6px 10px;border-radius:6px;width:70px;text-align:center;
+  outline:none;
+}
+input[type=number]:focus{border-color:var(--teal)}
+
+/* ── TAGS & BADGES ────────────────────────────── */
+.tag{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:0.72rem;font-weight:600;letter-spacing:0.04em;
+}
+.tag-teal{background:var(--teal-dim);color:var(--teal);border:1px solid #00d4aa33}
+.tag-amber{background:var(--amber-dim);color:var(--amber);border:1px solid #f5a62333}
+.tag-coral{background:var(--coral-dim);color:var(--coral);border:1px solid #ff6b6b33}
+.tag-purple{background:var(--purple-dim);color:var(--purple);border:1px solid #a78bfa33}
+.tag-green{background:var(--green-dim);color:var(--green);border:1px solid #4ade8033}
+
+/* ── CALLOUT ──────────────────────────────────── */
+.callout{
+  border-radius:var(--radius);padding:1rem 1.25rem;
+  margin:1.25rem 0;border-left:3px solid;font-size:0.88rem;line-height:1.7;
+}
+.callout-teal{background:var(--teal-dim);border-color:var(--teal);color:var(--text2)}
+.callout-amber{background:var(--amber-dim);border-color:var(--amber);color:var(--text2)}
+.callout-coral{background:var(--coral-dim);border-color:var(--coral);color:var(--text2)}
+.callout strong{color:var(--text)}
+
+/* ── NAV FOOTER ───────────────────────────────── */
+.nav-footer{
+  border-top:1px solid var(--border);
+  padding:1.25rem 2.5rem;
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg2);flex-shrink:0;
+}
+.nav-footer-info{font-size:0.8rem;color:var(--text3)}
+.nav-footer-btns{display:flex;gap:10px}
+
+/* ── MISC ─────────────────────────────────────── */
+.row{display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap}
+.col{display:flex;flex-direction:column}
+.label{font-size:0.72rem;color:var(--text3);margin-bottom:6px;font-family:var(--mono);letter-spacing:0.06em;text-transform:uppercase}
+.equals{font-size:1.5rem;color:var(--text3);padding-top:20px;align-self:center}
+.arrow{font-size:1.2rem;color:var(--text3);align-self:center;padding-top:20px}
+.result-box{
+  background:var(--teal-dim);border:1.5px solid var(--teal);
+  border-radius:10px;padding:1rem;text-align:center;
+  font-family:var(--mono);
+}
+.result-val{font-size:2rem;font-weight:600;color:var(--teal)}
+.result-label{font-size:0.72rem;color:var(--teal);opacity:0.7;margin-top:4px}
+.mono{font-family:var(--mono)}
+.dim{color:var(--text3)}
+.flex{display:flex}
+.gap-sm{gap:0.5rem}
+.gap-md{gap:1rem}
+.gap-lg{gap:1.5rem}
+.items-center{align-items:center}
+.mt-sm{margin-top:0.5rem}
+.mt-md{margin-top:1rem}
+.bar-wrap{height:28px;background:var(--border2);border-radius:6px;overflow:hidden;flex:1;min-width:100px}
+.bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:0.75rem;font-weight:600;font-family:var(--mono);transition:width 0.8s cubic-bezier(.34,1.56,.64,1)}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">CNN Math Explorer</div>
+    <div class="sidebar-sub">12 interactive steps · all math is live</div>
+    <div class="sidebar-progress"><div class="sidebar-progress-fill" id="progress-fill" style="width:8%"></div></div>
+  </div>
+  <div class="step-nav" id="step-nav"></div>
+</nav>
+
+<!-- ═══ MAIN ════════════════════════════════════ -->
+<div id="main">
+
+  <!-- STEP 0: IMAGE AS NUMBERS -->
+  <div class="step-content active" id="step-0">
+    <div class="step-header">
+      <div class="step-number">Step 01 of 12</div>
+      <div class="step-title">Image → Matrix of Numbers</div>
+      <div class="step-intro">A CNN never "sees" an image the way you do. It receives a grid of integers — one number per pixel — each between 0 (black) and 255 (white). Everything else builds on this foundation.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Representation</div>
+      <div class="formula-main">
+        Image<sub>grayscale</sub> = <span class="hl-teal">H × W</span> matrix, values ∈ [0, 255]<br>
+        Image<sub>color</sub> = <span class="hl-teal">H × W × 3</span> tensor (R, G, B channels)
+      </div>
+      <div class="formula-note">First step before feeding into CNN: normalize → divide every value by 255 → range becomes [0.0, 1.0]</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Try it — click any pixel to edit its value</div>
+      <div class="row gap-lg">
+        <div class="col">
+          <div class="label">Visual image (5×5)</div>
+          <div class="g5" id="img-visual"></div>
+        </div>
+        <div class="col">
+          <div class="label">Same image as numbers</div>
+          <div class="g5" id="img-numbers"></div>
+        </div>
+        <div class="col">
+          <div class="label">Normalized (÷255)</div>
+          <div class="g5" id="img-norm"></div>
+        </div>
+      </div>
+      <div id="img-info" class="mt-md" style="font-family:var(--mono);font-size:0.8rem;color:var(--text3);min-height:1.2em"></div>
+    </div>
+
+    <div class="callout callout-teal">
+      <strong>Why normalize to [0,1]?</strong> Gradient descent works best when inputs are small. Raw pixel values (0–255) would cause gradients to be 255× larger than necessary, making training unstable. After ÷255 everything is in the same small range.
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Color image = 3 separate matrices</div>
+      <div class="row gap-md" id="rgb-panels"></div>
+      <div class="mt-md" style="font-size:0.82rem;color:var(--text2)">
+        Tensor shape: <span class="mono hl-teal">5 × 5 × 3</span> = <span class="mono hl-amber">75 numbers total</span>.
+        A real 224×224 color image = 224 × 224 × 3 = <span class="mono hl-amber">150,528 numbers</span>.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: THE FILTER -->
+  <div class="step-content" id="step-1">
+    <div class="step-header">
+      <div class="step-number">Step 02 of 12</div>
+      <div class="step-title">The Filter (Kernel)</div>
+      <div class="step-intro">A filter is a small matrix of numbers — the CNN's "pattern detector". Its values are learned during training. Different values detect different patterns.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Filter notation</div>
+      <div class="formula-main">
+        W = <span class="hl-teal">K × K × C</span> tensor of learned weights<br>
+        where K = filter size (usually 3), C = input channels
+      </div>
+      <div class="formula-note">A first-layer filter on a grayscale image: 3×3×1 = 9 weights. On color: 3×3×3 = 27 weights. Each weight starts random and is refined by training.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Filter explorer — click a preset or edit cells</div>
+      <div class="row gap-md" style="margin-bottom:1rem">
+        <button class="btn btn-ghost btn-sm" onclick="loadFilter('vedge')">Vertical edge</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadFilter('hedge')">Horizontal edge</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadFilter('blur')">Blur</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadFilter('sharpen')">Sharpen</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadFilter('random')">Random</button>
+      </div>
+      <div class="row gap-lg">
+        <div class="col">
+          <div class="label">Filter values (click to edit)</div>
+          <div class="g3" id="filter-edit"></div>
+          <div class="mt-sm" id="filter-bias-row" style="display:flex;align-items:center;gap:8px;font-size:0.8rem;font-family:var(--mono)">
+            <span style="color:var(--text3)">bias b =</span>
+            <input type="number" id="filter-bias" value="0" min="-5" max="5" style="width:60px" oninput="updateFilterViz()">
+          </div>
+        </div>
+        <div class="col" style="flex:1">
+          <div class="label">What this filter detects</div>
+          <div id="filter-explain" style="font-size:0.88rem;line-height:1.75;color:var(--text2);padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border)"></div>
+          <div class="mt-sm" id="filter-heatmap-label" style="font-size:0.75rem;color:var(--text3)">Green = positive weight (looks for brightness there) · Red = negative (penalizes brightness)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-amber">
+      <strong>Key insight:</strong> A filter with +1 on the left and −1 on the right says "I fire strongly when the left side of my window is bright and the right side is dark." That's a vertical edge. The CNN doesn't know what an edge is — it discovers this pattern automatically because it helps reduce the loss.
+    </div>
+  </div>
+
+  <!-- STEP 2: ONE CONVOLUTION STEP -->
+  <div class="step-content" id="step-2">
+    <div class="step-header">
+      <div class="step-number">Step 03 of 12</div>
+      <div class="step-title">One Convolution Step</div>
+      <div class="step-intro">Place the filter over a patch of the image. Multiply every pair of matching numbers. Sum all products. Add bias. That's one output value.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Dot product + bias</div>
+      <div class="formula-main">
+        output = <span class="hl-teal">Σ</span><sub>r,s</sub> <span class="hl-purple">W[r,s]</span> × <span class="hl-amber">X[i+r, j+s]</span> + <span class="hl-coral">b</span>
+      </div>
+      <div class="formula-note">W = filter weights · X = image patch · b = bias · (r,s) iterates over all K×K filter positions</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Live calculation — edit any cell to recompute</div>
+      <div class="row gap-lg">
+        <div class="col">
+          <div class="label">Image patch (3×3) — <span style="color:var(--amber)">click to edit</span></div>
+          <div class="g3" id="conv-patch"></div>
+        </div>
+        <div style="font-size:1.6rem;color:var(--text3);align-self:center;padding-top:16px">×</div>
+        <div class="col">
+          <div class="label">Filter weights <span style="color:var(--purple)">(W)</span></div>
+          <div class="g3" id="conv-filter"></div>
+        </div>
+        <div style="font-size:1.6rem;color:var(--text3);align-self:center;padding-top:16px">+</div>
+        <div class="col" style="align-self:center">
+          <div class="label">Bias</div>
+          <input type="number" id="conv-bias" value="0" min="-9" max="9" oninput="recomputeConv()" style="width:64px;text-align:center">
+        </div>
+        <div style="font-size:1.6rem;color:var(--text3);align-self:center;padding-top:16px">=</div>
+        <div class="col" style="align-self:center">
+          <div class="label">Raw output</div>
+          <div class="result-box" style="min-width:80px">
+            <div class="result-val" id="conv-result">—</div>
+            <div class="result-label">before ReLU</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem">
+        <div class="label">Calculation breakdown</div>
+        <div id="conv-breakdown" style="background:var(--bg4);border-radius:8px;padding:1rem;border:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+    <div class="callout callout-teal">
+      <strong>Parameter sharing:</strong> This same filter — these same 9 numbers — slides to every position in the image. A filter that detects an edge at the top-left automatically detects the same edge anywhere in the image. This is why CNNs are so parameter-efficient compared to fully connected networks.
+    </div>
+  </div>
+
+  <!-- STEP 3: SLIDING = FEATURE MAP -->
+  <div class="step-content" id="step-3">
+    <div class="step-header">
+      <div class="step-number">Step 04 of 12</div>
+      <div class="step-title">Sliding Across → Full Feature Map</div>
+      <div class="step-intro">The filter doesn't just apply once — it slides to every valid position. Each position produces one output value. The full collection is the feature map.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Output size formula</div>
+      <div class="formula-main">
+        Output size = <span class="hl-teal">⌊(N + 2P − K) / S⌋ + 1</span>
+      </div>
+      <div class="formula-note">N = input size · K = filter size · P = padding · S = stride</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Interactive slide — click output cells to see the patch</div>
+      <div class="row gap-lg">
+        <div class="col">
+          <div class="label">Input image (5×5)</div>
+          <div class="g5" id="slide-input"></div>
+          <div class="mt-sm" style="font-size:0.78rem;color:var(--text3)">Purple = current patch</div>
+        </div>
+        <div class="col" style="align-self:flex-start;padding-top:10px">
+          <div style="font-size:0.75rem;color:var(--text3);font-family:var(--mono);text-align:center;margin-bottom:4px">3×3 filter</div>
+          <div class="g3" id="slide-filter" style="margin:0 auto"></div>
+        </div>
+        <div class="col">
+          <div class="label">Output feature map (3×3) — <span style="color:var(--teal)">click any cell</span></div>
+          <div class="g3" id="slide-output"></div>
+          <div class="mt-sm" style="font-size:0.78rem;color:var(--teal)" id="slide-info">Click an output cell to see which input patch produced it</div>
+        </div>
+      </div>
+      <div class="mt-md" style="padding:0.75rem 1rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border)">
+        <div class="label">Formula check</div>
+        <span class="mono" style="font-size:0.85rem">⌊(5 + 0 - 3) / 1⌋ + 1 = </span>
+        <span class="mono hl-teal" style="font-size:0.85rem">3</span>
+        <span style="font-size:0.82rem;color:var(--text3);margin-left:8px">→ 3×3 = 9 output values from one filter pass</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Stride & Padding effects — see output size change live</div>
+      <div class="row gap-lg items-center">
+        <div>
+          <div class="label">Stride S</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="1" max="2" value="1" id="stride-slider" oninput="updateSize()" style="width:100px">
+            <span class="mono hl-amber" id="stride-val">1</span>
+          </div>
+        </div>
+        <div>
+          <div class="label">Padding P</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="0" max="2" value="0" id="pad-slider" oninput="updateSize()" style="width:100px">
+            <span class="mono hl-amber" id="pad-val">0</span>
+          </div>
+        </div>
+        <div class="col" style="flex:1">
+          <div class="label">Output size (5×5 input, 3×3 filter)</div>
+          <div id="size-formula" style="font-family:var(--mono);font-size:0.88rem;padding:10px;background:var(--bg4);border-radius:8px;border:1px solid var(--border)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: RELU -->
+  <div class="step-content" id="step-4">
+    <div class="step-header">
+      <div class="step-number">Step 05 of 12</div>
+      <div class="step-title">ReLU Activation</div>
+      <div class="step-intro">After convolution, every value passes through ReLU — the simplest possible function. It's just: keep positives, zero out negatives. Yet without it, stacking layers would be meaningless.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">ReLU (Rectified Linear Unit)</div>
+      <div class="formula-main">
+        <span class="hl-teal">ReLU(x)</span> = max(0, x)
+      </div>
+      <div class="formula-note">5 → 5 &nbsp;·&nbsp; 12.3 → 12.3 &nbsp;·&nbsp; −3 → 0 &nbsp;·&nbsp; −8.7 → 0 &nbsp;·&nbsp; 0 → 0</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Live transform — drag sliders, watch values change</div>
+      <div id="relu-sliders"></div>
+      <div class="mt-md row gap-lg">
+        <div class="col" style="flex:1">
+          <div class="label">Before ReLU (conv outputs)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px" id="relu-before"></div>
+        </div>
+        <div class="arrow" style="padding-top:30px;font-size:2rem">→</div>
+        <div class="col" style="flex:1">
+          <div class="label">After ReLU: max(0, x)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px" id="relu-after"></div>
+        </div>
+      </div>
+      <div class="mt-md" style="font-family:var(--mono);font-size:0.8rem;color:var(--text3)" id="relu-summary"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Why is non-linearity essential?</div>
+      <div style="font-size:0.88rem;color:var(--text2);line-height:1.75">
+        Without ReLU: <span class="mono hl-coral">W₂(W₁x) = (W₂W₁)x</span> — two linear layers collapse into one. No matter how many layers you add, the whole network behaves like a single matrix multiplication. It can only learn straight-line decision boundaries.<br><br>
+        With ReLU: each layer can "bend" the space. The network can learn curved, complex boundaries — like the shape of a face or the outline of a car.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: MAX POOLING -->
+  <div class="step-content" id="step-5">
+    <div class="step-header">
+      <div class="step-number">Step 06 of 12</div>
+      <div class="step-title">Max Pooling</div>
+      <div class="step-intro">After ReLU, max pooling compresses the feature map. It scans a small window and keeps only the largest value — throwing away exact position, preserving signal strength.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">2×2 Max Pool, stride 2</div>
+      <div class="formula-main">
+        Output[i,j] = <span class="hl-teal">max</span>( X[2i,2j], X[2i,2j+1], X[2i+1,2j], X[2i+1,2j+1] )
+      </div>
+      <div class="formula-note">Zero learnable parameters. Output size = ⌊Input size / 2⌋ for each spatial dimension.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Click each output cell to reveal its max</div>
+      <div class="row gap-lg">
+        <div class="col">
+          <div class="label">Input feature map (4×4)</div>
+          <div class="g4" id="pool-input"></div>
+          <div class="mt-sm" style="font-size:0.78rem;color:var(--text3)">Colors show 2×2 regions · winner = bright</div>
+        </div>
+        <div class="arrow">→<br><span style="font-size:0.65rem;font-family:var(--mono)">max each<br>region</span></div>
+        <div class="col">
+          <div class="label">Output (2×2)</div>
+          <div class="g4" id="pool-output" style="grid-template-columns:repeat(2,70px)!important"></div>
+          <div class="mt-sm">
+            <span class="tag tag-teal">16 → 4 values</span>
+            <span style="font-size:0.78rem;color:var(--text3);margin-left:6px">4× compression</span>
+          </div>
+        </div>
+        <div class="col" style="flex:1">
+          <div class="label">Calculation</div>
+          <div id="pool-calc" style="font-family:var(--mono);font-size:0.82rem;padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border);line-height:2;color:var(--text2)">
+            Click an output cell to see the max calculation
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-amber">
+      <strong>Why "max" specifically?</strong> A high activation = "I found this feature here." The max says "this feature appeared somewhere in this 2×2 neighborhood." We don't care where exactly — just that it was there. Average would dilute a strong detection. Min would do the opposite of what we want.
+    </div>
+  </div>
+
+  <!-- STEP 6: MULTIPLE FILTERS -->
+  <div class="step-content" id="step-6">
+    <div class="step-header">
+      <div class="step-number">Step 07 of 12</div>
+      <div class="step-title">Multiple Filters → Feature Maps</div>
+      <div class="step-intro">One layer doesn't use one filter — it uses N filters simultaneously. Each filter scans the entire input and produces its own feature map. The N maps are stacked to form the 3D output tensor.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Layer output tensor</div>
+      <div class="formula-main">
+        Output shape = <span class="hl-teal">H′ × W′ × N</span><br>
+        Parameters = <span class="hl-amber">(K × K × C_in + 1) × N</span>
+      </div>
+      <div class="formula-note">H′,W′ = spatial output dims · N = number of filters · C_in = input channels · +1 = bias per filter</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Parameter count calculator</div>
+      <div class="row gap-lg items-center" style="flex-wrap:wrap">
+        <div>
+          <div class="label">Filter size K</div>
+          <input type="number" id="pc-k" value="3" min="1" max="7" oninput="calcParams()">
+        </div>
+        <div>
+          <div class="label">Input channels C_in</div>
+          <input type="number" id="pc-cin" value="3" min="1" max="512" oninput="calcParams()">
+        </div>
+        <div>
+          <div class="label">Num filters N</div>
+          <input type="number" id="pc-n" value="32" min="1" max="512" oninput="calcParams()">
+        </div>
+        <div class="col" style="flex:1;min-width:200px">
+          <div class="label">Calculation</div>
+          <div id="param-calc" style="font-family:var(--mono);font-size:0.88rem;padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border);line-height:1.9"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Typical layer configurations in real CNNs</div>
+      <div id="layer-configs" style="font-size:0.85rem"></div>
+    </div>
+  </div>
+
+  <!-- STEP 7: LAYER DEPTH — 3D FILTER -->
+  <div class="step-content" id="step-7">
+    <div class="step-header">
+      <div class="step-number">Step 08 of 12</div>
+      <div class="step-title">Deep Filters — Layer 2 Onward</div>
+      <div class="step-intro">Layer 2 doesn't receive the original image — it receives the 32 feature maps from layer 1. So its filters are 3D blocks: 3×3×32. They look across all feature maps simultaneously to detect combinations.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">3D Convolution output at position (i,j), filter n</div>
+      <div class="formula-main">
+        Output[i,j,n] = <span class="hl-teal">Σ<sub>c</sub> Σ<sub>r,s</sub></span> <span class="hl-purple">W_n[r,s,c]</span> × <span class="hl-amber">X[i+r, j+s, c]</span> + <span class="hl-coral">b_n</span>
+      </div>
+      <div class="formula-note">c iterates over all input channels · r,s iterate over the K×K spatial filter · W_n is the 3D filter for output channel n</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Why "all channels at once" matters — corner detector example</div>
+      <div class="row gap-lg" style="flex-wrap:wrap">
+        <div class="col">
+          <div class="label">Layer 1 map A: vertical edges</div>
+          <div class="g3" id="l2-map-a"></div>
+          <div class="mt-sm" style="font-size:0.75rem;color:var(--text3)">High = vertical edge found</div>
+        </div>
+        <div style="align-self:center;font-size:1.2rem;color:var(--text3)">+</div>
+        <div class="col">
+          <div class="label">Layer 1 map B: horizontal edges</div>
+          <div class="g3" id="l2-map-b"></div>
+          <div class="mt-sm" style="font-size:0.75rem;color:var(--text3)">High = horizontal edge found</div>
+        </div>
+        <div style="align-self:center;font-size:1.2rem;color:var(--text3)">→</div>
+        <div class="col">
+          <div class="label">Layer 2 output: corner map</div>
+          <div class="g3" id="l2-output"></div>
+          <div class="mt-sm" style="font-size:0.75rem;color:var(--teal)">High = both edges present = corner!</div>
+        </div>
+      </div>
+      <div class="mt-md callout callout-teal" style="margin:1rem 0 0">
+        The Layer 2 filter learns <strong>large weights for both channel A and channel B</strong>, near-zero for everything else. The only place both are high at the same position is the corner. That's what makes it a corner detector.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8: FLATTEN + FC -->
+  <div class="step-content" id="step-8">
+    <div class="step-header">
+      <div class="step-number">Step 09 of 12</div>
+      <div class="step-title">Flatten → Fully Connected Layer</div>
+      <div class="step-intro">After all the conv + pool layers, the 3D feature tensor is unrolled into a 1D vector. Then every value connects to every output neuron through a learned weight.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Fully connected operation</div>
+      <div class="formula-main">
+        <span class="hl-teal">z_j</span> = <span class="hl-purple">Σ<sub>i</sub> W<sub>ij</sub></span> × <span class="hl-amber">x_i</span> + <span class="hl-coral">b_j</span><br>
+        <span class="hl-teal">output_j</span> = ReLU(z_j)
+      </div>
+      <div class="formula-note">x_i = flattened input values · W_ij = weight from input i to output j · b_j = bias for output j</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Live FC calculation — edit inputs and weights</div>
+      <div class="row gap-lg">
+        <div class="col">
+          <div class="label">Input vector x (4 values)</div>
+          <div id="fc-inputs"></div>
+        </div>
+        <div class="col" style="flex:1">
+          <div class="label">Weights W & biases b (2 output neurons)</div>
+          <div id="fc-weights"></div>
+        </div>
+        <div class="col">
+          <div class="label">Outputs (after ReLU)</div>
+          <div id="fc-outputs"></div>
+        </div>
+      </div>
+      <div class="mt-md">
+        <div class="label">Full calculation</div>
+        <div id="fc-calc" style="font-family:var(--mono);font-size:0.8rem;padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border);line-height:2"></div>
+      </div>
+    </div>
+
+    <div class="callout callout-coral">
+      <strong>Parameter explosion:</strong> FC layers are expensive. 25,088 inputs × 4,096 outputs = <strong>102M parameters</strong> — just in one layer. Modern CNNs often replace FC layers with global average pooling to cut this dramatically.
+    </div>
+  </div>
+
+  <!-- STEP 9: SOFTMAX -->
+  <div class="step-content" id="step-9">
+    <div class="step-header">
+      <div class="step-number">Step 10 of 12</div>
+      <div class="step-title">Softmax — Scores to Probabilities</div>
+      <div class="step-intro">The last FC layer outputs raw scores (logits) — one per class. Softmax converts these into proper probabilities that are positive and sum to exactly 1.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Softmax function</div>
+      <div class="formula-main">
+        P(class i) = <span class="hl-teal">e<sup>z_i</sup></span> / <span class="hl-amber">Σ<sub>j</sub> e<sup>z_j</sup></span>
+      </div>
+      <div class="formula-note">z_i = raw logit score for class i · e = Euler's number ≈ 2.718 · The denominator ensures all probabilities sum to 1</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Drag logit scores — watch probabilities update live</div>
+      <div id="softmax-sliders"></div>
+      <div class="mt-md">
+        <div class="label">Softmax probabilities</div>
+        <div id="softmax-bars"></div>
+      </div>
+      <div class="mt-md" style="font-family:var(--mono);font-size:0.8rem;color:var(--text3)" id="softmax-calc"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Why exponential? Why not just normalize directly?</div>
+      <div style="font-size:0.88rem;color:var(--text2);line-height:1.75">
+        Direct normalization: z/Σz doesn't work if any z is negative.<br>
+        Exponential <span class="mono hl-teal">e^z</span> is always positive, and amplifies differences — a score of 4 vs 2 gives much more than 2× the probability. This makes the winning class dominate clearly, which is what we want for confident predictions.
+      </div>
+      <div class="mt-sm" id="softmax-exp-demo" style="font-family:var(--mono);font-size:0.82rem;padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border);line-height:2;color:var(--text2)"></div>
+    </div>
+  </div>
+
+  <!-- STEP 10: LOSS FUNCTION -->
+  <div class="step-content" id="step-10">
+    <div class="step-header">
+      <div class="step-number">Step 11 of 12</div>
+      <div class="step-title">Loss Function — Measuring "How Wrong"</div>
+      <div class="step-intro">The loss function takes the network's output probabilities and the correct label, and returns one number measuring how bad the prediction was. Training tries to make this number as small as possible.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Cross-Entropy Loss</div>
+      <div class="formula-main">
+        L = <span class="hl-coral">−log</span>( <span class="hl-teal">P(correct class)</span> )
+      </div>
+      <div class="formula-note">If the network assigns 99% to the right answer: L = −log(0.99) ≈ 0.01 (tiny loss, good prediction)<br>If it assigns 1% to the right answer: L = −log(0.01) ≈ 4.6 (huge loss, terrible prediction)</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Try it — pick the correct class and change the confidence</div>
+      <div class="row gap-lg">
+        <div class="col" style="flex:1">
+          <div class="label">Prediction probabilities (must sum to 1)</div>
+          <div id="loss-inputs"></div>
+        </div>
+        <div class="col" style="min-width:180px">
+          <div class="label">Correct class</div>
+          <div id="loss-class-picker"></div>
+        </div>
+        <div class="col" style="align-self:center">
+          <div class="label">Loss value</div>
+          <div class="result-box" id="loss-result" style="min-width:100px;border-color:var(--coral);background:var(--coral-dim)">
+            <div class="result-val" id="loss-val" style="color:var(--coral)">—</div>
+            <div class="result-label" style="color:var(--coral)">−log(P_correct)</div>
+          </div>
+        </div>
+      </div>
+      <div id="loss-graph" class="mt-md" style="padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border)">
+        <div class="label" style="margin-bottom:8px">Loss curve: L = −log(P)</div>
+        <canvas id="loss-canvas" width="500" height="140" style="width:100%;border-radius:4px"></canvas>
+        <div class="mt-sm" style="font-size:0.75rem;color:var(--text3);text-align:center">x-axis: P(correct class) · y-axis: Loss · Red dot = current value</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 11: BACKPROP + GRADIENT DESCENT -->
+  <div class="step-content" id="step-11">
+    <div class="step-header">
+      <div class="step-number">Step 12 of 12</div>
+      <div class="step-title">Backprop & Gradient Descent</div>
+      <div class="step-intro">Once we have the loss, we compute how much each weight contributed to the error (the gradient), then nudge every weight in the direction that reduces the loss.</div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-label">Weight update rule (Gradient Descent)</div>
+      <div class="formula-main">
+        <span class="hl-teal">W_new</span> = <span class="hl-amber">W_old</span> − <span class="hl-purple">α</span> × <span class="hl-coral">∂L/∂W</span>
+      </div>
+      <div class="formula-note">α (learning rate) = step size · ∂L/∂W (gradient) = "how much does the loss change when W increases slightly?" · computed via chain rule (backprop)</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Interactive gradient descent — 1D loss landscape</div>
+      <div class="row gap-lg items-center" style="margin-bottom:1rem;flex-wrap:wrap">
+        <div>
+          <div class="label">Learning rate α</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="0" max="4" step="1" value="2" id="lr-slider" oninput="setLR(this.value)" style="width:120px">
+            <span class="mono hl-purple" id="lr-val">0.10</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="stepGD()">Take 1 step</button>
+        <button class="btn btn-primary btn-sm" onclick="runGD()" id="run-btn">▶ Run to minimum</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetGD()">Reset</button>
+        <span id="gd-info" style="font-size:0.8rem;color:var(--text3)"></span>
+      </div>
+      <canvas id="gd-canvas" width="700" height="220" style="width:100%;border-radius:8px;border:1px solid var(--border)"></canvas>
+      <div class="mt-md" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="gd-stats"></div>
+      <div id="gd-explain" class="mt-md" style="font-family:var(--mono);font-size:0.8rem;padding:0.75rem;background:var(--bg4);border-radius:8px;border:1px solid var(--border);line-height:1.8;color:var(--text2)"></div>
+    </div>
+
+    <div class="callout callout-teal">
+      <strong>Chain rule (backpropagation):</strong> ∂L/∂W_conv = (∂L/∂output) × (∂output/∂W_conv). The second term equals the input patch that was multiplied by W — data we already have from the forward pass. Backprop is just this chain rule applied recursively from the loss all the way back to the first layer.
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Complete training loop</div>
+      <div id="train-loop" style="font-size:0.88rem"></div>
+    </div>
+  </div>
+
+  <!-- NAV FOOTER -->
+  <div class="nav-footer">
+    <div class="nav-footer-info" id="step-counter">Step 1 of 12</div>
+    <div class="nav-footer-btns">
+      <button class="btn btn-ghost" id="prev-btn" onclick="navigate(-1)" disabled>← Previous</button>
+      <button class="btn btn-primary" id="next-btn" onclick="navigate(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   GLOBAL STATE
+═══════════════════════════════════════════════ */
+let currentStep = 0;
+const totalSteps = 12;
+
+const stepMeta = [
+  {num:'01', title:'Image as Numbers'},
+  {num:'02', title:'The Filter'},
+  {num:'03', title:'One Conv Step'},
+  {num:'04', title:'Full Feature Map'},
+  {num:'05', title:'ReLU Activation'},
+  {num:'06', title:'Max Pooling'},
+  {num:'07', title:'Multiple Filters'},
+  {num:'08', title:'Deep Filters'},
+  {num:'09', title:'Flatten + FC Layer'},
+  {num:'10', title:'Softmax'},
+  {num:'11', title:'Loss Function'},
+  {num:'12', title:'Gradient Descent'},
+];
+
+/* ─── BUILD SIDEBAR ─────────────────────────── */
+function buildSidebar() {
+  const nav = document.getElementById('step-nav');
+  stepMeta.forEach((s,i) => {
+    const d = document.createElement('div');
+    d.className = 'step-item' + (i===0?' active':'');
+    d.id = `nav-${i}`;
+    d.onclick = () => goTo(i);
+    d.innerHTML = `<div class="step-dot">${s.num}</div><div class="step-label">${s.title}</div>`;
+    nav.appendChild(d);
+  });
+}
+
+function goTo(idx) {
+  document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.step-item').forEach((s,i) => {
+    s.classList.toggle('active', i===idx);
+    s.classList.toggle('done', i<idx);
+  });
+  document.getElementById(`step-${idx}`).classList.add('active');
+  document.getElementById('step-counter').textContent = `Step ${idx+1} of ${totalSteps}`;
+  document.getElementById('prev-btn').disabled = idx===0;
+  document.getElementById('next-btn').textContent = idx===totalSteps-1 ? '🎉 Complete!' : 'Next →';
+  document.getElementById('next-btn').disabled = idx===totalSteps-1;
+  document.getElementById('progress-fill').style.width = ((idx+1)/totalSteps*100)+'%';
+  document.getElementById('main').scrollTop = 0;
+  currentStep = idx;
+}
+
+function navigate(dir) { goTo(Math.max(0,Math.min(totalSteps-1, currentStep+dir))); }
+
+/* ─── HELPERS ───────────────────────────────── */
+function cell(val, cls='', size=52) {
+  const bg = cls.includes('highlight') ? 'rgba(0,212,170,0.15)' :
+             cls.includes('winner') ? 'rgba(0,212,170,0.3)' :
+             cls.includes('pos') ? 'rgba(74,222,128,0.12)' :
+             cls.includes('neg') ? 'rgba(255,107,107,0.12)' :
+             cls.includes('active-conv') ? 'rgba(167,139,250,0.2)' : 'var(--bg4)';
+  const color = cls.includes('highlight')||cls.includes('winner') ? 'var(--teal2)' :
+                cls.includes('pos') ? 'var(--green)' :
+                cls.includes('neg') ? 'var(--coral)' :
+                cls.includes('active-conv') ? 'var(--purple)' : 'var(--text2)';
+  const border = cls.includes('winner') ? '2px solid var(--teal)' :
+                 cls.includes('highlight') ? '1px solid var(--teal)' :
+                 cls.includes('pos') ? '1px solid var(--green)' :
+                 cls.includes('neg') ? '1px solid var(--coral)' :
+                 cls.includes('active-conv') ? '1px solid var(--purple)' : '1px solid var(--border2)';
+  return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.82rem;font-weight:500;border-radius:6px;border:${border};background:${bg};color:${color}">${val}</div>`;
+}
+
+function fmtNum(v) { return parseFloat(v.toFixed(3)); }
+
+/* ═══════════════════════════════════════════════
+   STEP 0 — IMAGE DEMO
+═══════════════════════════════════════════════ */
+const imgPixels = [
+  [20,40,90,180,220],
+  [30,60,120,200,230],
+  [15,50,140,210,225],
+  [25,70,160,195,240],
+  [35,80,130,185,210]
+];
+function buildStep0() {
+  const vg = document.getElementById('img-visual');
+  const ng = document.getElementById('img-numbers');
+  const norm = document.getElementById('img-norm');
+  const info = document.getElementById('img-info');
+  [vg,ng,norm].forEach(g => g.innerHTML='');
+  imgPixels.forEach((row,r) => row.forEach((v,c) => {
+    const gray = `rgb(${v},${v},${v})`;
+    const tc = v<130?'#eee':'#222';
+    // visual
+    const vc = document.createElement('div');
+    vc.className = 'cell';
+    vc.style.cssText=`width:52px;height:52px;background:${gray};border:1px solid rgba(255,255,255,0.05)`;
+    vc.onmouseenter = () => info.innerHTML = `<span style="color:var(--teal)">Row ${r+1}, Col ${c+1}</span> → value = <span style="color:var(--amber)">${v}</span> → ${(v/255*100).toFixed(1)}% white`;
+    vc.onmouseleave = () => info.textContent = '';
+    vg.appendChild(vc);
+    // numbers
+    const nc = document.createElement('div');
+    nc.className = 'cell';
+    nc.style.cssText=`width:52px;height:52px;font-family:var(--mono);font-size:0.78rem;font-weight:500;background:${gray};color:${tc};border:1px solid rgba(255,255,255,0.05)`;
+    nc.textContent = v;
+    nc.onmouseenter = () => info.innerHTML = `<span style="color:var(--teal)">Row ${r+1}, Col ${c+1}</span> → value = <span style="color:var(--amber)">${v}</span>`;
+    nc.onmouseleave = () => info.textContent = '';
+    ng.appendChild(nc);
+    // normalized
+    const nv = (v/255).toFixed(2);
+    const a = v/255;
+    const nc2 = document.createElement('div');
+    nc2.className = 'cell';
+    nc2.style.cssText=`width:52px;height:52px;font-family:var(--mono);font-size:0.75rem;font-weight:500;background:rgba(0,212,170,${a*0.35});color:var(--teal);border:1px solid rgba(0,212,170,${a*0.4+0.05})`;
+    nc2.textContent = nv;
+    norm.appendChild(nc2);
+  }));
+
+  // RGB panels
+  const rgbWrap = document.getElementById('rgb-panels');
+  rgbWrap.innerHTML = '';
+  const rData=[[230,180,40,20],[200,160,30,15],[120,80,20,10],[60,30,10,5]];
+  const gData=[[50,120,180,200],[40,100,160,190],[20,60,130,170],[10,30,80,140]];
+  const bData=[[20,30,40,220],[15,25,35,200],[10,20,30,180],[5,15,25,160]];
+  [['R','red',rData],[' G','green',gData],['B','blue',bData]].forEach(([lbl,ch,dat])=>{
+    const card = document.createElement('div');
+    card.style.cssText='flex:1;min-width:150px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:0.75rem';
+    const colors = {R:'var(--coral)',G:'var(--green)',B:'var(--blue)'};
+    const chFn = {R:(v)=>`rgba(${v},0,0,0.8)`,G:(v)=>`rgba(0,${v},0,0.8)`,B:(v)=>`rgba(0,0,${v},0.8)`};
+    card.innerHTML = `<div style="font-size:0.72rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${colors[lbl.trim()]};margin-bottom:8px">${lbl.trim()} Channel</div>`;
+    const g = document.createElement('div');
+    g.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:2px';
+    dat.forEach(row=>row.forEach(v=>{
+      const d = document.createElement('div');
+      d.style.cssText=`aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;border-radius:2px;background:${chFn[lbl.trim()](v)};color:${v>120?'#000':'#fff'}`;
+      d.textContent=v;
+      g.appendChild(d);
+    }));
+    card.appendChild(g);
+    rgbWrap.appendChild(card);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 1 — FILTER
+═══════════════════════════════════════════════ */
+let filterVals = [1,0,-1,1,0,-1,1,0,-1];
+const filterPresets = {
+  vedge:{vals:[1,0,-1,1,0,-1,1,0,-1],desc:'<strong>Vertical edge detector.</strong> Left column = +1 (bright activates), right column = −1 (bright suppresses). Fires at left-to-right brightness transitions. A vertical dark/light boundary produces a large positive output.'},
+  hedge:{vals:[1,1,1,0,0,0,-1,-1,-1],desc:'<strong>Horizontal edge detector.</strong> Top row = +1, bottom = −1. Fires at top-to-bottom brightness transitions. Rotate 90° from the vertical detector.'},
+  blur:{vals:[1,1,1,1,1,1,1,1,1],desc:'<strong>Blur / average filter.</strong> All weights equal. Output = weighted average of 3×3 neighborhood. Smooths out noise and sharp transitions. All values × (1/9) when normalized.'},
+  sharpen:{vals:[0,-1,0,-1,5,-1,0,-1,0],desc:'<strong>Sharpen filter.</strong> Center = 5, direct neighbors = −1. Amplifies the center pixel relative to its surroundings. Makes edges pop, flat regions unchanged.'},
+  random:{vals:null,desc:'<strong>Random filter.</strong> This is what a filter looks like at initialization — before training. The CNN will adjust these values over thousands of steps to detect whatever pattern helps most.'},
+};
+function loadFilter(type) {
+  if(type==='random') {
+    filterVals = Array.from({length:9},()=>parseFloat((Math.random()*2-1).toFixed(2)));
+    filterPresets.random.vals = [...filterVals];
+  } else {
+    filterVals = [...filterPresets[type].vals];
+  }
+  renderFilterEdit();
+  document.getElementById('filter-explain').innerHTML = filterPresets[type].desc;
+}
+function renderFilterEdit() {
+  const g = document.getElementById('filter-edit');
+  g.innerHTML = '';
+  filterVals.forEach((v,i) => {
+    const d = document.createElement('div');
+    const a = Math.min(Math.abs(v)/2,1);
+    const bg = v>0 ? `rgba(74,222,128,${0.1+a*0.3})` : v<0 ? `rgba(255,107,107,${0.1+a*0.3})` : 'var(--bg4)';
+    const col = v>0?'var(--green)':v<0?'var(--coral)':'var(--text3)';
+    const border = v>0?'1px solid var(--green)':v<0?'1px solid var(--coral)':'1px solid var(--border2)';
+    d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.8rem;font-weight:600;border-radius:6px;background:${bg};color:${col};border:${border};cursor:pointer;transition:all 0.15s`;
+    d.textContent = v;
+    d.onclick = () => {
+      const nv = prompt(`Enter new value for cell ${i+1}:`, v);
+      if(nv!==null && !isNaN(parseFloat(nv))) { filterVals[i]=parseFloat(nv); renderFilterEdit(); }
+    };
+    g.appendChild(d);
+  });
+}
+function updateFilterViz() { renderFilterEdit(); }
+function buildStep1() {
+  loadFilter('vedge');
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 2 — ONE CONV STEP
+═══════════════════════════════════════════════ */
+let convPatch = [1,2,3,4,5,6,7,8,9];
+let convFilter = [1,0,-1,1,0,-1,1,0,-1];
+function buildStep2() {
+  renderConvPatch(); renderConvFilter(); recomputeConv();
+}
+function renderConvPatch() {
+  const g = document.getElementById('conv-patch');
+  g.innerHTML='';
+  convPatch.forEach((v,i) => {
+    const d = document.createElement('div');
+    d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.9rem;font-weight:600;border-radius:6px;background:rgba(167,139,250,0.15);color:var(--purple);border:1px solid rgba(167,139,250,0.4);cursor:pointer`;
+    d.textContent=v;
+    d.onclick=()=>{ const nv=prompt(`Edit patch cell ${i+1}:`,v); if(nv!==null&&!isNaN(+nv)){convPatch[i]=+nv;renderConvPatch();recomputeConv();} };
+    g.appendChild(d);
+  });
+}
+function renderConvFilter() {
+  const g = document.getElementById('conv-filter');
+  g.innerHTML='';
+  convFilter.forEach(v=>{
+    const d=document.createElement('div');
+    const a=Math.min(Math.abs(v)/2,1);
+    const bg=v>0?`rgba(0,212,170,${0.1+a*0.25})`:v<0?`rgba(255,107,107,${0.1+a*0.25})`:'var(--bg4)';
+    const col=v>0?'var(--teal)':v<0?'var(--coral)':'var(--text3)';
+    d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.9rem;font-weight:600;border-radius:6px;background:${bg};color:${col};border:1px solid var(--border2)`;
+    d.textContent=v;
+    g.appendChild(d);
+  });
+}
+function recomputeConv() {
+  const bias = parseFloat(document.getElementById('conv-bias').value)||0;
+  let sum=0;
+  const bd = document.getElementById('conv-breakdown');
+  bd.innerHTML='';
+  convPatch.forEach((p,i) => {
+    const w=convFilter[i], prod=p*w;
+    sum+=prod;
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:0.8rem';
+    row.innerHTML=`<span style="color:var(--text3);width:16px">${i===0?'':i<1?'':''}</span><span style="color:var(--purple)">x[${i}]=${p}</span><span style="color:var(--text3)"> × </span><span style="color:var(--teal)">w[${i}]=${w}</span><span style="color:var(--text3)"> = </span><span style="color:${prod>=0?'var(--green)':'var(--coral)'};width:36px;text-align:right">${prod}</span>`;
+    bd.appendChild(row);
+  });
+  const sumRow=document.createElement('div');
+  sumRow.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0 4px;font-family:var(--mono);font-size:0.82rem;font-weight:600';
+  sumRow.innerHTML=`<span style="color:var(--text3)">Sum of products:</span><span style="color:var(--amber)">${sum}</span>`;
+  bd.appendChild(sumRow);
+  const biasRow=document.createElement('div');
+  biasRow.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0;font-family:var(--mono);font-size:0.82rem;font-weight:600';
+  biasRow.innerHTML=`<span style="color:var(--text3)">+ bias:</span><span style="color:var(--coral)">${bias}</span><span style="color:var(--text3)"> = </span><span style="color:var(--teal);font-size:1rem">${sum+bias}</span>`;
+  bd.appendChild(biasRow);
+  document.getElementById('conv-result').textContent=sum+bias;
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 3 — SLIDE
+═══════════════════════════════════════════════ */
+const slideImg = [
+  [2,4,3,1,0],[5,6,2,3,1],[8,7,4,2,0],[9,5,3,1,2],[6,4,2,0,1]
+];
+const slideF = [1,0,-1,1,0,-1,1,0,-1];
+function computeSlideOut() {
+  const out=[];
+  for(let r=0;r<3;r++) for(let c=0;c<3;c++) {
+    let s=0;
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) s+=slideImg[r+i][c+j]*slideF[i*3+j];
+    out.push(s);
+  }
+  return out;
+}
+let selectedOut=-1;
+function buildStep3() {
+  const inp=document.getElementById('slide-input');
+  const outg=document.getElementById('slide-output');
+  const filtg=document.getElementById('slide-filter');
+  inp.innerHTML=''; outg.innerHTML=''; filtg.innerHTML='';
+  const outs=computeSlideOut();
+  // filter display
+  slideF.forEach(v=>{
+    const d=document.createElement('div');
+    const bg=v>0?'rgba(0,212,170,0.2)':v<0?'rgba(255,107,107,0.2)':'var(--bg4)';
+    const col=v>0?'var(--teal)':v<0?'var(--coral)':'var(--text3)';
+    d.style.cssText=`width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.78rem;font-weight:600;border-radius:5px;background:${bg};color:${col};border:1px solid var(--border2)`;
+    d.textContent=v; filtg.appendChild(d);
+  });
+  // input grid
+  slideImg.forEach((row,r)=>row.forEach((v,c)=>{
+    const d=document.createElement('div');
+    d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.85rem;font-weight:500;border-radius:6px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);transition:all 0.2s`;
+    d.textContent=v; d.id=`si-${r}-${c}`; inp.appendChild(d);
+  }));
+  // output grid
+  outs.forEach((v,i)=>{
+    const or=Math.floor(i/3), oc=i%3;
+    const d=document.createElement('div');
+    d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.85rem;font-weight:500;border-radius:6px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);cursor:pointer;transition:all 0.2s`;
+    d.textContent=v; d.id=`so-${i}`;
+    d.onclick=()=>highlightPatch(or,oc,i,v);
+    outg.appendChild(d);
+  });
+  updateSize();
+}
+function highlightPatch(or,oc,idx,val) {
+  // reset
+  document.querySelectorAll('[id^="si-"]').forEach(d=>{ d.style.background='var(--bg4)'; d.style.borderColor='var(--border2)'; d.style.color='var(--text2)'; });
+  document.querySelectorAll('[id^="so-"]').forEach(d=>{ d.style.background='var(--bg4)'; d.style.borderColor='var(--border2)'; d.style.color='var(--text2)'; });
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++) {
+    const d=document.getElementById(`si-${or+i}-${oc+j}`);
+    if(d){d.style.background='rgba(167,139,250,0.2)';d.style.borderColor='var(--purple)';d.style.color='var(--purple)';}
+  }
+  const od=document.getElementById(`so-${idx}`);
+  if(od){od.style.background='rgba(0,212,170,0.2)';od.style.borderColor='var(--teal)';od.style.color='var(--teal2)';od.style.fontWeight='700';}
+  document.getElementById('slide-info').textContent=`Output (${or+1},${oc+1}) = ${val} — from the purple patch at input rows ${or+1}–${or+3}, cols ${oc+1}–${oc+3}`;
+}
+function updateSize() {
+  const S=parseInt(document.getElementById('stride-slider').value);
+  const P=parseInt(document.getElementById('pad-slider').value);
+  document.getElementById('stride-val').textContent=S;
+  document.getElementById('pad-val').textContent=P;
+  const out=Math.floor((5+2*P-3)/S)+1;
+  document.getElementById('size-formula').innerHTML=`⌊(5 + 2×${P} - 3) / ${S}⌋ + 1 = ⌊${5+2*P-3}/${S}⌋ + 1 = <span style="color:var(--teal)">${out}</span> → <span style="color:var(--teal)">${out}×${out}</span> output`;
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 4 — RELU
+═══════════════════════════════════════════════ */
+let reluVals=[-6,8,-3,12,-1,5,9,-4,7,-2,3,11];
+function buildStep4() {
+  const sliders=document.getElementById('relu-sliders');
+  sliders.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:10px';
+  reluVals.forEach((v,i)=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;flex-direction:column;gap:4px;align-items:center';
+    d.innerHTML=`<div style="font-size:0.7rem;color:var(--text3);font-family:var(--mono)">x[${i}]</div>
+      <input type="range" min="-15" max="15" value="${v}" style="width:100%" oninput="updateRelu(${i},+this.value)">
+      <span id="rv-${i}" style="font-family:var(--mono);font-size:0.8rem;color:${v>=0?'var(--green)':'var(--coral)'}">${v}</span>`;
+    wrap.appendChild(d);
+  });
+  sliders.appendChild(wrap);
+  renderReLU();
+}
+function updateRelu(i,v){ reluVals[i]=v; const el=document.getElementById(`rv-${i}`); if(el){el.textContent=v;el.style.color=v>=0?'var(--green)':'var(--coral)';} renderReLU(); }
+function renderReLU(){
+  const bef=document.getElementById('relu-before'), aft=document.getElementById('relu-after');
+  bef.innerHTML=''; aft.innerHTML='';
+  let killed=0;
+  reluVals.forEach(v=>{
+    const pos=v>=0;
+    const bd=document.createElement('div');
+    bd.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.82rem;font-weight:600;border-radius:6px;background:${pos?'rgba(74,222,128,0.12)':'rgba(255,107,107,0.12)'};color:${pos?'var(--green)':'var(--coral)'};border:1px solid ${pos?'var(--green)':'var(--coral)'}`;
+    bd.textContent=v; bef.appendChild(bd);
+    const rv=Math.max(0,v);
+    if(!pos) killed++;
+    const ad=document.createElement('div');
+    ad.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.82rem;font-weight:600;border-radius:6px;background:${rv>0?'rgba(74,222,128,0.12)':'var(--bg4)'};color:${rv>0?'var(--green)':'var(--text3)'};border:1px solid ${rv>0?'var(--green)':'var(--border2)'}`;
+    ad.textContent=rv; aft.appendChild(ad);
+  });
+  document.getElementById('relu-summary').innerHTML=`<span style="color:var(--coral)">${killed} negative values zeroed</span> · <span style="color:var(--green)">${reluVals.length-killed} positive values kept</span> · ReLU gradient = 1 for positive inputs (no vanishing gradient problem)`;
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 5 — POOLING
+═══════════════════════════════════════════════ */
+const poolData=[[9,3,8,1],[5,7,4,6],[1,4,5,3],[3,6,2,7]];
+const regionColors=[['rgba(0,212,170,0.15)','var(--teal)'],['rgba(167,139,250,0.15)','var(--purple)'],['rgba(245,166,35,0.15)','var(--amber)'],['rgba(255,107,107,0.15)','var(--coral)']];
+const regionBorders=['var(--teal)','var(--purple)','var(--amber)','var(--coral)'];
+function buildStep5(){
+  const inp=document.getElementById('pool-input'), out=document.getElementById('pool-output');
+  inp.innerHTML=''; out.innerHTML='';
+  const regionOf=(r,c)=>Math.floor(r/2)*2+Math.floor(c/2);
+  poolData.forEach((row,r)=>row.forEach((v,c)=>{
+    const ri=regionOf(r,c);
+    const d=document.createElement('div');
+    d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.88rem;font-weight:500;border-radius:6px;background:${regionColors[ri][0]};color:${regionColors[ri][1]};border:1px solid ${regionBorders[ri]}`;
+    d.textContent=v; inp.appendChild(d);
+  }));
+  [[9,3,5,7],[8,1,4,6],[1,4,3,6],[5,3,2,7]].forEach((region,i)=>{
+    const maxV=Math.max(...region);
+    const d=document.createElement('div');
+    d.style.cssText=`width:70px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);border-radius:8px;background:${regionColors[i][0]};color:${regionColors[i][1]};border:2px solid ${regionBorders[i]};cursor:pointer;transition:all 0.2s`;
+    d.innerHTML=`<span style="font-size:1.3rem;font-weight:700">${maxV}</span><span style="font-size:0.65rem;opacity:0.7;margin-top:2px">click to see</span>`;
+    d.onclick=()=>{
+      document.getElementById('pool-calc').innerHTML=`<span style="color:${regionColors[i][1]}">Region ${i+1}:</span> max(${region.join(', ')}) = <span style="color:var(--teal);font-size:1.1rem;font-weight:700">${maxV}</span><br><span style="color:var(--text3);font-size:0.78rem">The other ${region.length-1} values (${region.filter(v=>v!==maxV).join(', ')}) are discarded — they had no gradient flow in backprop.</span>`;
+      d.style.background=regionColors[i][1]==='var(--teal)'?'rgba(0,212,170,0.3)':regionColors[i][0];
+    };
+    out.appendChild(d);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 6 — MULTIPLE FILTERS
+═══════════════════════════════════════════════ */
+function calcParams(){
+  const K=+document.getElementById('pc-k').value||3;
+  const C=+document.getElementById('pc-cin').value||3;
+  const N=+document.getElementById('pc-n').value||32;
+  const weights=K*K*C*N, biases=N, total=weights+biases;
+  document.getElementById('param-calc').innerHTML=`Filter weights: K×K×C_in×N = ${K}×${K}×${C}×${N} = <span style="color:var(--amber)">${weights.toLocaleString()}</span><br>Biases: N = <span style="color:var(--coral)">${N}</span><br>Total: <span style="color:var(--teal);font-size:1.1rem;font-weight:600">${total.toLocaleString()}</span> learnable parameters`;
+}
+function buildStep6(){
+  calcParams();
+  const configs=[
+    {layer:'AlexNet Conv1',K:11,C:3,N:96,note:'Larger filter to capture broad structure'},
+    {layer:'VGG Conv1',K:3,C:3,N:64,note:'Small 3×3 is now the standard'},
+    {layer:'VGG Conv5',K:3,C:512,N:512,note:'Deep channels, same small filter'},
+    {layer:'ResNet Layer 1',K:7,C:3,N:64,note:'Larger first layer for 224×224 input'},
+  ];
+  const wrap=document.getElementById('layer-configs');
+  wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  configs.forEach(c=>{
+    const params=(c.K*c.K*c.C+1)*c.N;
+    wrap.innerHTML+=`<div style="padding:0.75rem;background:var(--bg4);border:1px solid var(--border);border-radius:8px"><div style="font-family:var(--mono);font-size:0.78rem;color:var(--teal);margin-bottom:4px">${c.layer}</div><div style="font-size:0.8rem;color:var(--text2);margin-bottom:6px">${c.K}×${c.K}×${c.C}, ${c.N} filters</div><div style="font-family:var(--mono);font-size:0.88rem;color:var(--amber)">${params.toLocaleString()} params</div><div style="font-size:0.75rem;color:var(--text3);margin-top:3px">${c.note}</div></div>`;
+  });
+  wrap.innerHTML+='</div>';
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 7 — 3D FILTERS
+═══════════════════════════════════════════════ */
+function buildStep7(){
+  const vertMap=[[0,0,0],[9,0,0],[9,0,0]];
+  const horizMap=[[0,0,0],[9,9,9],[0,0,0]];
+  const combined=[[0,0,0],[18,0,0],[0,0,0]];
+  ['l2-map-a','l2-map-b','l2-output'].forEach((id,mi)=>{
+    const g=document.getElementById(id); g.innerHTML='';
+    const data=[vertMap,horizMap,combined][mi];
+    data.forEach(row=>row.forEach(v=>{
+      const a=Math.min(v/18,1);
+      const colors=[['rgba(167,139,250,',')','var(--purple)'],['rgba(96,165,250,',')','var(--blue)'],['rgba(245,166,35,',')','var(--amber)']];
+      const [rb,re,tc]=colors[mi];
+      const d=document.createElement('div');
+      d.style.cssText=`width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.9rem;font-weight:${v>0?'700':'400'};border-radius:6px;background:${v>0?rb+(0.1+a*0.4)+re:'var(--bg4)'};color:${v>0?tc:'var(--text3)'};border:1px solid ${v>0?tc+'66':'var(--border2)'}`;
+      d.textContent=v; g.appendChild(d);
+    }));
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 8 — FC LAYER
+═══════════════════════════════════════════════ */
+let fcX=[3,7,2,5], fcW=[[0.4,-0.3,0.7,-0.2],[-0.2,0.8,-0.4,0.6]], fcB=[0.5,-0.3];
+function buildStep8(){
+  renderFC();
+}
+function renderFC(){
+  const inpWrap=document.getElementById('fc-inputs'); inpWrap.innerHTML='';
+  fcX.forEach((v,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px';
+    row.innerHTML=`<span style="font-family:var(--mono);font-size:0.78rem;color:var(--text3);width:24px">x${i+1}</span><input type="number" value="${v}" min="-10" max="10" step="0.5" style="width:64px" oninput="fcX[${i}]=+this.value;computeFC()">`;
+    inpWrap.appendChild(row);
+  });
+  const wWrap=document.getElementById('fc-weights'); wWrap.innerHTML='';
+  fcW.forEach((row,j)=>{
+    const wr=document.createElement('div');
+    wr.style.cssText='margin-bottom:8px';
+    wr.innerHTML=`<div style="font-size:0.72rem;color:var(--text3);font-family:var(--mono);margin-bottom:4px">Neuron ${j+1} weights + bias:</div>`;
+    const inputs=document.createElement('div');
+    inputs.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center';
+    row.forEach((w,i)=>{
+      const d=document.createElement('div');
+      d.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px';
+      d.innerHTML=`<span style="font-size:0.65rem;color:var(--text3);font-family:var(--mono)">w${j+1}${i+1}</span><input type="number" value="${w}" min="-2" max="2" step="0.1" style="width:58px" oninput="fcW[${j}][${i}]=+this.value;computeFC()">`;
+      inputs.appendChild(d);
+    });
+    const bd=document.createElement('div');
+    bd.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px';
+    bd.innerHTML=`<span style="font-size:0.65rem;color:var(--coral);font-family:var(--mono)">b${j+1}</span><input type="number" value="${fcB[j]}" min="-2" max="2" step="0.1" style="width:58px" oninput="fcB[${j}]=+this.value;computeFC()">`;
+    inputs.appendChild(bd);
+    wr.appendChild(inputs);
+    wWrap.appendChild(wr);
+  });
+  computeFC();
+}
+function computeFC(){
+  const outs=document.getElementById('fc-outputs'); outs.innerHTML='';
+  const calc=document.getElementById('fc-calc'); calc.innerHTML='';
+  fcW.forEach((row,j)=>{
+    const z=row.reduce((s,w,i)=>s+w*fcX[i],0)+fcB[j];
+    const relu=Math.max(0,z);
+    const d=document.createElement('div');
+    d.style.cssText=`margin-bottom:10px;padding:10px 14px;border-radius:8px;background:${relu>0?'rgba(74,222,128,0.1)':'rgba(255,107,107,0.08)'};border:1px solid ${relu>0?'var(--green)':'var(--coral)'}`;
+    d.innerHTML=`<div style="font-family:var(--mono);font-size:0.72rem;color:var(--text3)">Neuron ${j+1}</div><div style="font-family:var(--mono);font-size:1.2rem;font-weight:700;color:${relu>0?'var(--green)':'var(--coral)'}">z=${z.toFixed(2)} → ReLU → ${relu.toFixed(2)}</div>`;
+    outs.appendChild(d);
+    const terms=row.map((w,i)=>`(${w}×${fcX[i]})`).join(' + ');
+    calc.innerHTML+=`<div style="padding:4px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Neuron ${j+1}:</span> <span style="color:var(--purple)">${terms}</span> + <span style="color:var(--coral)">${fcB[j]}</span> = <span style="color:var(--amber)">${z.toFixed(3)}</span> → ReLU → <span style="color:${relu>0?'var(--green)':'var(--coral)'};font-weight:600">${relu.toFixed(3)}</span></div>`;
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 9 — SOFTMAX
+═══════════════════════════════════════════════ */
+const softmaxClasses=['cat','dog','car','bird','fish'];
+const softmaxColors=['var(--teal)','var(--purple)','var(--amber)','var(--coral)','var(--blue)'];
+let logits=[4.2,1.1,-0.3,0.8,-1.2];
+function softmax(z){ const e=z.map(v=>Math.exp(v)); const s=e.reduce((a,b)=>a+b); return e.map(v=>v/s); }
+function buildStep9(){
+  const sliders=document.getElementById('softmax-sliders');
+  sliders.innerHTML='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">';
+  logits.forEach((v,i)=>{
+    sliders.innerHTML+=`<div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="font-size:0.72rem;color:${softmaxColors[i]};font-family:var(--mono)">${softmaxClasses[i]}</div><input type="range" min="-3" max="6" step="0.1" value="${v}" style="width:100%" oninput="logits[${i}]=+this.value;document.getElementById('lv-${i}').textContent=(+this.value).toFixed(1);renderSoftmax()"><span id="lv-${i}" style="font-family:var(--mono);font-size:0.8rem;color:${softmaxColors[i]}">${v}</span></div>`;
+  });
+  sliders.innerHTML+='</div>';
+  renderSoftmax();
+}
+function renderSoftmax(){
+  const probs=softmax(logits);
+  const bars=document.getElementById('softmax-bars'); bars.innerHTML='';
+  const exps=logits.map(v=>Math.exp(v));
+  const sumE=exps.reduce((a,b)=>a+b);
+  probs.forEach((p,i)=>{
+    const pct=Math.round(p*100);
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;margin:6px 0';
+    row.innerHTML=`<span style="width:44px;font-size:0.85rem;font-weight:600;color:${softmaxColors[i]}">${softmaxClasses[i]}</span><div style="flex:1;height:28px;background:var(--border2);border-radius:6px;overflow:hidden"><div style="height:100%;border-radius:6px;background:${softmaxColors[i]};width:${p*100}%;display:flex;align-items:center;padding:0 8px;font-size:0.75rem;font-weight:600;color:var(--bg);transition:width 0.6s;min-width:${pct>5?'0px':'0px'}">${pct>8?pct+'%':''}</div></div><span style="width:40px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:${softmaxColors[i]}">${pct}%</span>`;
+    bars.appendChild(row);
+  });
+  const calc=document.getElementById('softmax-calc');
+  calc.innerHTML=`e^z: [${exps.map(v=>v.toFixed(2)).join(', ')}] → sum = ${sumE.toFixed(2)} → probabilities: [${probs.map(v=>(v*100).toFixed(1)+'%').join(', ')}]`;
+  const demo=document.getElementById('softmax-exp-demo');
+  demo.innerHTML=`Example: cat score ${logits[0].toFixed(1)} vs dog score ${logits[1].toFixed(1)}<br>e^${logits[0].toFixed(1)} = ${Math.exp(logits[0]).toFixed(2)}, e^${logits[1].toFixed(1)} = ${Math.exp(logits[1]).toFixed(2)}<br>Ratio: ${(Math.exp(logits[0])/Math.exp(logits[1])).toFixed(2)}× more likely for cat than dog`;
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 10 — LOSS
+═══════════════════════════════════════════════ */
+let lossProbs=[0.7,0.15,0.08,0.05,0.02]; let correctClass=0;
+function buildStep10(){
+  renderLossInputs();
+  drawLossCurve();
+}
+function renderLossInputs(){
+  const wrap=document.getElementById('loss-inputs'); wrap.innerHTML='';
+  const picker=document.getElementById('loss-class-picker'); picker.innerHTML='';
+  softmaxClasses.forEach((cls,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;margin:7px 0';
+    row.innerHTML=`<span style="width:36px;font-size:0.82rem;color:${softmaxColors[i]}">${cls}</span><input type="range" min="0" max="100" value="${Math.round(lossProbs[i]*100)}" style="flex:1" oninput="updateLossProbs(${i},+this.value)"><span id="lp-${i}" style="font-family:var(--mono);font-size:0.8rem;color:${softmaxColors[i]};width:40px;text-align:right">${Math.round(lossProbs[i]*100)}%</span>`;
+    wrap.appendChild(row);
+    const btn=document.createElement('button');
+    btn.style.cssText=`display:block;width:100%;padding:5px 8px;margin:4px 0;border-radius:6px;border:1px solid ${correctClass===i?softmaxColors[i]:'var(--border2)'};background:${correctClass===i?'rgba(0,212,170,0.1)':'transparent'};color:${correctClass===i?softmaxColors[i]:'var(--text3)'};font-size:0.8rem;cursor:pointer`;
+    btn.textContent=cls; btn.onclick=()=>{ correctClass=i; renderLossInputs(); computeLoss(); };
+    picker.appendChild(btn);
+  });
+  computeLoss();
+}
+function updateLossProbs(i,pct){
+  lossProbs[i]=pct/100;
+  const total=lossProbs.reduce((a,b)=>a+b);
+  // normalize
+  lossProbs=lossProbs.map(v=>v/total);
+  lossProbs.forEach((v,j)=>{ const el=document.getElementById(`lp-${j}`); if(el) el.textContent=Math.round(v*100)+'%'; });
+  computeLoss();
+}
+function computeLoss(){
+  const p=Math.max(lossProbs[correctClass],1e-7);
+  const loss=-Math.log(p);
+  document.getElementById('loss-val').textContent=loss.toFixed(3);
+  drawLossCurve(p);
+}
+function drawLossCurve(currentP){
+  const canvas=document.getElementById('loss-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#161920'; ctx.fillRect(0,0,W,H);
+  const pad={l:40,r:20,t:15,b:30};
+  const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
+  // axes
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+iH); ctx.lineTo(pad.l+iW,pad.t+iH); ctx.stroke();
+  // curve: y = -log(x) for x in (0,1]
+  ctx.beginPath(); ctx.strokeStyle='#ff6b6b'; ctx.lineWidth=2;
+  for(let px=0;px<=iW;px++){
+    const x=(px/iW)*0.99+0.01;
+    const y=-Math.log(x);
+    const cy=pad.t+iH-Math.min(y/5,1)*iH;
+    const cx=pad.l+px;
+    px===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  // labels
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px IBM Plex Mono'; ctx.textAlign='center';
+  [0.1,0.3,0.5,0.7,0.9].forEach(v=>{ ctx.fillText(v.toFixed(1),pad.l+v*iW,pad.t+iH+16); });
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  [0,1,2,3,4,5].forEach(v=>{ const y=pad.t+iH-Math.min(v/5,1)*iH; ctx.fillText(v,pad.l-5,y); });
+  // current dot
+  if(currentP!==undefined){
+    const cx=pad.l+((currentP-0.01)/0.99)*iW;
+    const cy=pad.t+iH-Math.min(-Math.log(currentP)/5,1)*iH;
+    ctx.beginPath(); ctx.arc(cx,cy,6,0,2*Math.PI);
+    ctx.fillStyle='var(--teal)'; ctx.fill();
+    ctx.strokeStyle='var(--bg)'; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   STEP 11 — GRADIENT DESCENT
+═══════════════════════════════════════════════ */
+const lrOptions=[0.01,0.05,0.1,0.3,0.8];
+let gdLR=0.1, gdW=2.8, gdHistory=[{w:2.8,l:gdLoss(2.8)}], gdTimer=null;
+function gdLoss(w){ return 0.8*(w-0.4)*(w-0.4)+0.2*Math.sin(w*3)*0.3+0.5; }
+function gdGrad(w){ return 1.6*(w-0.4)+0.2*Math.cos(w*3)*0.9; }
+function setLR(v){ gdLR=lrOptions[+v]; document.getElementById('lr-val').textContent=gdLR.toFixed(2); resetGD(); }
+function resetGD(){ if(gdTimer){clearInterval(gdTimer);gdTimer=null;document.getElementById('run-btn').textContent='▶ Run to minimum';} gdW=2.8; gdHistory=[{w:2.8,l:gdLoss(2.8)}]; drawGD(); updateGDStats(); }
+function stepGD(){ const g=gdGrad(gdW); if(Math.abs(g)<0.001) return; gdW=gdW-gdLR*g; gdHistory.push({w:gdW,l:gdLoss(gdW)}); drawGD(); updateGDStats(); }
+function runGD(){
+  if(gdTimer){clearInterval(gdTimer);gdTimer=null;document.getElementById('run-btn').textContent='▶ Run to minimum';return;}
+  document.getElementById('run-btn').textContent='■ Stop';
+  gdTimer=setInterval(()=>{ const g=gdGrad(gdW); if(Math.abs(g)<0.001){clearInterval(gdTimer);gdTimer=null;document.getElementById('run-btn').textContent='▶ Run to minimum';return;} gdW=gdW-gdLR*g; gdHistory.push({w:gdW,l:gdLoss(gdW)}); drawGD(); updateGDStats(); },180);
+}
+function updateGDStats(){
+  const g=gdGrad(gdW);
+  const step=(-gdLR*g);
+  const div=document.getElementById('gd-stats');
+  div.innerHTML=['W','Loss','Gradient ∂L/∂W','Step −α×g'].map((label,i)=>{
+    const val=[gdW.toFixed(4),(gdLoss(gdW)).toFixed(4),g.toFixed(4),step.toFixed(4)][i];
+    const colors=['var(--amber)','var(--coral)','var(--purple)','var(--teal)'];
+    return `<div style="padding:8px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px"><div style="font-size:0.68rem;color:var(--text3);margin-bottom:3px;font-family:var(--mono)">${label}</div><div style="font-family:var(--mono);font-size:1rem;font-weight:600;color:${colors[i]}">${val}</div></div>`;
+  }).join('');
+  const atMin=Math.abs(gdW-0.4)<0.05;
+  document.getElementById('gd-explain').innerHTML= atMin
+    ? `<span style="color:var(--teal)">Converged!</span> W = ${gdW.toFixed(4)} ≈ 0.4 (true minimum). Gradient ≈ 0, so W_new = W_old − α×0 = W_old. Training has converged for this weight.`
+    : `W = ${gdW.toFixed(4)} · Gradient = ${g.toFixed(4)} (${g>0?'positive → W is right of min, move left':'negative → W is left of min, move right'}) · Update: W = ${gdW.toFixed(3)} − ${gdLR}×(${g.toFixed(3)}) = ${(gdW-gdLR*g).toFixed(4)}`;
+}
+function drawGD(){
+  const canvas=document.getElementById('gd-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#111318'; ctx.fillRect(0,0,W,H);
+  const pad={l:40,r:20,t:20,b:30};
+  const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
+  const xR=[-1.5,4.0], yR=[0.2,4.0];
+  const toC=(wx,wy)=>[ pad.l+(wx-xR[0])/(xR[1]-xR[0])*iW, pad.t+iH-(wy-yR[0])/(yR[1]-yR[0])*iH ];
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5;
+  for(let v=-1;v<=4;v++){ const [cx,cy]=toC(v,yR[0]); ctx.beginPath(); ctx.moveTo(cx,pad.t); ctx.lineTo(cx,pad.t+iH); ctx.stroke(); }
+  // axes
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+iH); ctx.lineTo(pad.l+iW,pad.t+iH); ctx.stroke();
+  // labels
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px IBM Plex Mono'; ctx.textAlign='center';
+  [-1,0,1,2,3,4].forEach(v=>{ const [cx]=toC(v,yR[0]); ctx.fillText(v,cx,pad.t+iH+15); });
+  ctx.textAlign='center'; ctx.fillText('Weight value W →', pad.l+iW/2, H-2);
+  // curve
+  ctx.beginPath(); ctx.strokeStyle='rgba(167,139,250,0.7)'; ctx.lineWidth=2.5;
+  for(let px=0;px<=300;px++){
+    const w=xR[0]+px/300*(xR[1]-xR[0]), l=gdLoss(w);
+    const [cx,cy]=toC(w,l);
+    px===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  // min line
+  const [mx,my]=toC(0.4,gdLoss(0.4));
+  ctx.strokeStyle='rgba(74,222,128,0.3)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(mx,pad.t); ctx.lineTo(mx,pad.t+iH); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='rgba(74,222,128,0.5)'; ctx.font='10px IBM Plex Mono'; ctx.textAlign='center';
+  ctx.fillText('min W=0.4',mx,pad.t+10);
+  // trail
+  if(gdHistory.length>1){
+    ctx.strokeStyle='rgba(0,212,170,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.beginPath();
+    gdHistory.forEach((h,i)=>{ const [cx,cy]=toC(h.w,h.l); i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy); });
+    ctx.stroke(); ctx.setLineDash([]);
+    gdHistory.slice(0,-1).forEach(h=>{ const [cx,cy]=toC(h.w,h.l); ctx.beginPath(); ctx.arc(cx,cy,3,0,2*Math.PI); ctx.fillStyle='rgba(0,212,170,0.4)'; ctx.fill(); });
+  }
+  // ball
+  const [bx,by]=toC(gdW,gdLoss(gdW));
+  ctx.beginPath(); ctx.arc(bx,by,9,0,2*Math.PI);
+  ctx.fillStyle='#f5a623'; ctx.fill();
+  ctx.strokeStyle='var(--bg)'; ctx.lineWidth=2; ctx.stroke();
+  // gradient arrow
+  const g=gdGrad(gdW), gs=Math.min(Math.abs(g)*20,50)*Math.sign(g);
+  ctx.strokeStyle='var(--coral)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+gs,by); ctx.stroke();
+}
+function buildStep11(){
+  drawGD(); updateGDStats();
+  document.getElementById('train-loop').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:0">
+    ${[['1. Forward pass','Show image → run all layers → get prediction','var(--teal)'],
+       ['2. Compute loss','Compare prediction to ground truth: L = −log(P_correct)','var(--coral)'],
+       ['3. Backpropagation','Chain rule backward: ∂L/∂W for every weight','var(--purple)'],
+       ['4. Update weights','W = W − α × ∂L/∂W for all W simultaneously','var(--amber)'],
+       ['5. Next example','Repeat for next training image. Do this millions of times.','var(--green)']
+    ].map(([t,d,c])=>`<div style="display:grid;grid-template-columns:160px 1fr;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--border)"><div style="font-family:var(--mono);font-size:0.82rem;font-weight:600;color:${c}">${t}</div><div style="font-size:0.85rem;color:var(--text2);line-height:1.6">${d}</div></div>`).join('')}
+    <div style="padding:0.75rem 0;font-size:0.85rem;color:var(--text3)">After enough iterations, every filter weight settles to a value that makes it a specialist detector — edges, corners, textures, eyes — all discovered automatically by following the gradient.</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+buildSidebar();
+buildStep0();
+buildStep1();
+buildStep2();
+buildStep3();
+buildStep4();
+buildStep5();
+buildStep6();
+buildStep7();
+buildStep8();
+buildStep9();
+buildStep10();
+buildStep11();
+// go to step 0
+goTo(0);
+</script>
+</body>
+</html>
