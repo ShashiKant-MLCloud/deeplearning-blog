@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recurrent Neural Networks — A Complete Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=JetBrains+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:   #0F1B2D;
+  --navy2:  #162236;
+  --blue:   #2563EB;
+  --teal:   #0891B2;
+  --gold:   #D97706;
+  --amber:  #F59E0B;
+  --red:    #DC2626;
+  --green:  #059669;
+  --purple: #7C3AED;
+  --cream:  #FAF7F2;
+  --warm:   #F5F0E8;
+  --border: rgba(255,255,255,0.08);
+  --text:   #E8E4DC;
+  --muted:  #8A9BB0;
+  --mono:   'JetBrains Mono', monospace;
+  --serif:  'Playfair Display', serif;
+  --sans:   'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.4;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,27,45,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.nav-brand {
+  font-family: var(--mono); font-size: 13px;
+  color: var(--amber); letter-spacing: 0.05em;
+}
+.nav-links {
+  display: flex; gap: 1.5rem; list-style: none;
+}
+.nav-links a {
+  font-family: var(--sans); font-size: 12px; color: var(--muted);
+  text-decoration: none; letter-spacing: 0.03em;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 6rem 2rem 4rem;
+  position: relative;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+}
+
+.hero-glow {
+  position: absolute; top: 20%; left: 50%;
+  transform: translateX(-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(ellipse, rgba(37,99,235,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-tag {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--amber); letter-spacing: 0.15em; text-transform: uppercase;
+  border: 1px solid rgba(217,119,6,0.3);
+  padding: 4px 14px; border-radius: 20px;
+  background: rgba(217,119,6,0.06);
+  margin-bottom: 2rem;
+  display: inline-block;
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero h1 {
+  font-family: var(--serif); font-size: clamp(2.8rem, 6vw, 5rem);
+  font-weight: 900; line-height: 1.1;
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+
+.hero h1 em {
+  font-style: italic; color: var(--amber);
+}
+
+.hero-sub {
+  font-size: 1.1rem; color: var(--muted); max-width: 640px;
+  margin: 0 auto 3rem;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-meta {
+  display: flex; gap: 2rem; justify-content: center;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+.scroll-indicator {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  animation: fadeUp 0.6s 0.5s ease both;
+}
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, var(--muted), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+/* ── MAIN LAYOUT ── */
+.container {
+  max-width: 860px; margin: 0 auto;
+  padding: 0 2rem;
+  position: relative; z-index: 1;
+}
+
+/* ── SECTIONS ── */
+section {
+  padding: 5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+section:last-child { border-bottom: none; }
+
+/* ── SECTION HEADER ── */
+.section-num {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--amber); letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+.section-title {
+  font-family: var(--serif); font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700; line-height: 1.2;
+  margin-bottom: 1rem;
+}
+.section-subtitle {
+  font-size: 1rem; color: var(--muted);
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── TYPOGRAPHY ── */
+h3 {
+  font-family: var(--serif); font-size: 1.25rem;
+  font-weight: 700; margin: 2rem 0 0.75rem;
+  color: var(--cream);
+}
+h4 {
+  font-family: var(--sans); font-size: 0.95rem;
+  font-weight: 500; margin: 1.5rem 0 0.5rem;
+  color: var(--amber); text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+p { margin-bottom: 1.2rem; color: var(--text); }
+p:last-child { margin-bottom: 0; }
+strong { color: var(--cream); font-weight: 500; }
+em { color: var(--amber); font-style: italic; }
+
+/* ── CODE ── */
+code {
+  font-family: var(--mono); font-size: 0.85em;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px;
+  color: var(--amber);
+}
+
+pre {
+  font-family: var(--mono); font-size: 0.83rem;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px; padding: 1.25rem 1.5rem;
+  overflow-x: auto; margin: 1.5rem 0;
+  line-height: 1.8; color: #A8D8EA;
+}
+pre .c  { color: var(--muted); }
+pre .h  { color: var(--amber); }
+pre .g  { color: #6EE7B7; }
+pre .r  { color: #FCA5A5; }
+pre .b  { color: #93C5FD; }
+pre .p  { color: #C4B5FD; }
+
+/* ── CALLOUT BOXES ── */
+.callout {
+  border-radius: 8px; padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0; position: relative;
+  border-left: 3px solid;
+}
+.callout-label {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 500; margin-bottom: 0.5rem;
+}
+.callout p { margin: 0; font-size: 0.95rem; }
+.callout.key    { background: rgba(37,99,235,0.08); border-color: var(--blue); }
+.callout.key .callout-label { color: var(--blue); }
+.callout.insight{ background: rgba(5,150,105,0.08); border-color: var(--green); }
+.callout.insight .callout-label { color: var(--green); }
+.callout.warn   { background: rgba(217,119,6,0.08); border-color: var(--amber); }
+.callout.warn .callout-label { color: var(--amber); }
+.callout.danger { background: rgba(220,38,38,0.08); border-color: var(--red); }
+.callout.danger .callout-label { color: var(--red); }
+
+/* ── EQUATION BOXES ── */
+.eq {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 8px; padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0; font-family: var(--mono);
+  font-size: 0.9rem; line-height: 2.2;
+  overflow-x: auto;
+}
+.eq .eq-label {
+  font-size: 0.72rem; color: var(--purple);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 0.75rem; font-weight: 500;
+}
+.eq-blue   { color: #93C5FD; }
+.eq-teal   { color: #5EEAD4; }
+.eq-green  { color: #6EE7B7; }
+.eq-red    { color: #FCA5A5; }
+.eq-amber  { color: var(--amber); }
+.eq-purple { color: #C4B5FD; }
+
+/* ── COMPARISON TABLE ── */
+.compare-table {
+  width: 100%; border-collapse: collapse; margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+.compare-table th {
+  background: rgba(255,255,255,0.04);
+  padding: 10px 14px; text-align: left;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--muted); letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+.compare-table td {
+  padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: top;
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+.td-accent { color: var(--amber); font-family: var(--mono); font-size: 0.88rem; }
+
+/* ── GRID CARDS ── */
+.card-grid {
+  display: grid; gap: 1rem; margin: 1.5rem 0;
+}
+.card-grid.cols2 { grid-template-columns: 1fr 1fr; }
+.card-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 1.25rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.card:hover {
+  border-color: rgba(37,99,235,0.3);
+  background: rgba(37,99,235,0.04);
+}
+.card-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+.card-title { font-family: var(--sans); font-size: 0.9rem; font-weight: 500; color: var(--cream); margin-bottom: 0.4rem; }
+.card-body  { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+/* ── DIAGRAM ASCII ── */
+.diagram {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 1.5rem; margin: 1.5rem 0;
+  font-family: var(--mono); font-size: 0.82rem;
+  line-height: 1.8; color: var(--text);
+  overflow-x: auto;
+}
+.diagram .d-blue   { color: #93C5FD; }
+.diagram .d-amber  { color: var(--amber); }
+.diagram .d-green  { color: #6EE7B7; }
+.diagram .d-red    { color: #FCA5A5; }
+.diagram .d-purple { color: #C4B5FD; }
+.diagram .d-muted  { color: var(--muted); }
+
+/* ── STEP LIST ── */
+.step-list { list-style: none; margin: 1.5rem 0; }
+.step-list li {
+  display: flex; gap: 1rem; margin-bottom: 1.25rem;
+  align-items: flex-start;
+}
+.step-num {
+  flex-shrink: 0; width: 28px; height: 28px;
+  border-radius: 50%; background: var(--navy2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; color: var(--amber);
+  margin-top: 2px;
+}
+.step-content { font-size: 0.95rem; }
+.step-content strong { display: block; margin-bottom: 0.25rem; }
+
+/* ── GRADIENT TABLE ── */
+.grad-row {
+  display: flex; align-items: center; gap: 12px;
+  margin: 6px 0; font-family: var(--mono); font-size: 0.82rem;
+}
+.grad-label { width: 80px; color: var(--muted); flex-shrink: 0; }
+.grad-track { flex: 1; height: 24px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.grad-fill  { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; transition: width 0.4s; }
+.grad-val   { width: 72px; text-align: right; flex-shrink: 0; }
+
+/* ── TOC ── */
+.toc {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 1.5rem; margin: 2rem 0;
+}
+.toc-title { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.1em; margin-bottom: 1rem; }
+.toc ol { list-style: none; counter-reset: toc; }
+.toc li { counter-increment: toc; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.toc li:last-child { border-bottom: none; }
+.toc a {
+  text-decoration: none; color: var(--muted); font-size: 0.88rem;
+  display: flex; align-items: center; gap: 10px;
+  transition: color 0.2s;
+}
+.toc a:hover { color: var(--text); }
+.toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--mono); font-size: 10px;
+  color: var(--amber); flex-shrink: 0;
+}
+
+/* ── PILL BADGES ── */
+.badge {
+  display: inline-block; font-family: var(--mono); font-size: 10px;
+  padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;
+  vertical-align: middle; margin: 0 2px;
+}
+.badge.blue   { background: rgba(37,99,235,0.2); color: #93C5FD; border: 1px solid rgba(37,99,235,0.3); }
+.badge.amber  { background: rgba(217,119,6,0.2); color: var(--amber); border: 1px solid rgba(217,119,6,0.3); }
+.badge.green  { background: rgba(5,150,105,0.2); color: #6EE7B7; border: 1px solid rgba(5,150,105,0.3); }
+.badge.red    { background: rgba(220,38,38,0.2); color: #FCA5A5; border: 1px solid rgba(220,38,38,0.3); }
+.badge.purple { background: rgba(124,58,237,0.2); color: #C4B5FD; border: 1px solid rgba(124,58,237,0.3); }
+
+/* ── FOOTER ── */
+footer {
+  background: rgba(0,0,0,0.3);
+  border-top: 1px solid var(--border);
+  padding: 3rem 2rem; text-align: center;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+footer a { color: var(--amber); text-decoration: none; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scrollPulse {
+  0%,100% { opacity: 0.3; } 50% { opacity: 1; }
+}
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px; background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 2rem 0;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .card-grid.cols2, .card-grid.cols3 { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  pre { font-size: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-brand">// rnn-complete-guide.html</span>
+  <ul class="nav-links">
+    <li><a href="#what">What is RNN</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#math">Mathematics</a></li>
+    <li><a href="#training">Training</a></li>
+    <li><a href="#vanishing">Gradients</a></li>
+    <li><a href="#lstm">LSTM</a></li>
+    <li><a href="#variants">Variants</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div style="position:relative;z-index:1">
+    <div class="hero-tag">Complete Technical Guide</div>
+    <h1>Recurrent<br><em>Neural Networks</em></h1>
+    <p class="hero-sub">From first principles to LSTM — every concept, equation, and intuition you need to deeply understand sequence modelling with neural networks.</p>
+    <div class="hero-meta">
+      <span>⏱ 45 min read</span>
+      <span>📐 Full mathematics</span>
+      <span>🧠 Beginner → Advanced</span>
+      <span>🔗 LSTM & Variants included</span>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    <div class="scroll-line"></div>
+    scroll
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">TABLE OF CONTENTS</div>
+    <ol>
+      <li><a href="#what">What is an RNN and why does it exist?</a></li>
+      <li><a href="#ann-vs-rnn">ANN / CNN vs RNN — the fundamental difference</a></li>
+      <li><a href="#architecture">RNN architecture — one layer per time step</a></li>
+      <li><a href="#deep-rnn">Deep (stacked) RNN — multiple hidden layers</a></li>
+      <li><a href="#weights">Weight identity — what stays same, what changes</a></li>
+      <li><a href="#math">The mathematics — forward pass equations</a></li>
+      <li><a href="#sequence">Sequence length — how it is determined</a></li>
+      <li><a href="#training">Training — forward pass, loss, backpropagation</a></li>
+      <li><a href="#vanishing">Vanishing gradient — the core problem</a></li>
+      <li><a href="#lstm">LSTM — the solution</a></li>
+      <li><a href="#variants">Variants — GRU, BiLSTM, Stacked LSTM</a></li>
+      <li><a href="#applications">Real-world applications</a></li>
+      <li><a href="#summary">Summary & what comes next</a></li>
+    </ol>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 1: WHAT IS RNN -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="what">
+    <div class="section-num">01 — INTRODUCTION</div>
+    <h2 class="section-title">What is an RNN and why does it exist?</h2>
+    <p class="section-subtitle">The motivation behind recurrent networks — why ordinary neural networks fall short for sequences.</p>
+
+    <p>A <strong>Recurrent Neural Network (RNN)</strong> is a class of neural network designed to process <em>sequential data</em> — data where order matters and where understanding context from prior steps improves prediction of future steps.</p>
+
+    <p>Language is the clearest example. To understand the word <em>"bank"</em> in a sentence, you need to know whether the previous words were about rivers or finance. To generate the pronoun <em>"she"</em>, you need to remember that the subject introduced three sentences ago was feminine. A standard feedforward network cannot do this — it processes each input in complete isolation, with no memory of what came before.</p>
+
+    <div class="callout key">
+      <div class="callout-label">Core Idea</div>
+      <p>An RNN solves this by maintaining a <strong>hidden state h(t)</strong> — a vector that acts as a running memory of everything the network has processed up to time step t. At each step, it updates this memory using both the new input and the old memory, then passes the updated state forward to the next step.</p>
+    </div>
+
+    <h3>Where sequential context matters</h3>
+    <div class="card-grid cols3">
+      <div class="card">
+        <div class="card-icon">🗣️</div>
+        <div class="card-title">Language</div>
+        <div class="card-body">Word meaning depends on prior words. Grammar depends on sentence structure built over many tokens.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎵</div>
+        <div class="card-title">Music & Audio</div>
+        <div class="card-body">The next note depends on the melody so far. Speech recognition needs context across phonemes.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📈</div>
+        <div class="card-title">Time Series</div>
+        <div class="card-body">Stock prices, weather, sensor data — each reading depends on recent history.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎬</div>
+        <div class="card-title">Video</div>
+        <div class="card-body">Understanding a frame requires knowing what happened in prior frames.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧬</div>
+        <div class="card-title">Biology</div>
+        <div class="card-body">DNA sequences, protein folding — position and neighbourhood context both matter.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <div class="card-title">Robotics</div>
+        <div class="card-body">Actions depend on the history of movements, sensor readings, and state.</div>
+      </div>
+    </div>
+
+    <div class="callout insight">
+      <div class="callout-label">Historical Note</div>
+      <p>RNNs were introduced in the 1980s and became dominant for sequence tasks in the 2000s–2010s. They were largely superseded by <strong>Transformers</strong> in 2017 for language tasks, but remain widely used in time-series forecasting, speech recognition, and embedded systems where memory efficiency matters.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 2: ANN VS RNN -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="ann-vs-rnn">
+    <div class="section-num">02 — COMPARISON</div>
+    <h2 class="section-title">ANN / CNN vs RNN — the fundamental difference</h2>
+    <p class="section-subtitle">Understanding the two axes — depth vs time — and why they are fundamentally different.</p>
+
+    <p>This is the most important conceptual distinction. ANN and RNN both use layers and weights — but they operate on completely different axes.</p>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>ANN / CNN</th>
+          <th>RNN</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Primary axis</td>
+          <td class="td-accent">Depth (layers)</td>
+          <td class="td-accent">Time (steps)</td>
+        </tr>
+        <tr>
+          <td>Input processed</td>
+          <td>Entire input at once — no order</td>
+          <td>One token/frame at a time — order matters</td>
+        </tr>
+        <tr>
+          <td>Weight structure</td>
+          <td>Each layer has its own unique weights W₁ ≠ W₂ ≠ W₃</td>
+          <td>Same single weight set W reused at every time step</td>
+        </tr>
+        <tr>
+          <td>Memory</td>
+          <td>None — stateless, each sample independent</td>
+          <td>Hidden state h(t) carries memory across time</td>
+        </tr>
+        <tr>
+          <td>Input length</td>
+          <td>Fixed — must be same size every time</td>
+          <td>Variable — can handle any sequence length T</td>
+        </tr>
+        <tr>
+          <td>Information flow</td>
+          <td>Layer 1 → Layer 2 → Layer 3 (one sample)</td>
+          <td>Step t → Step t+1 → Step t+2 (across time)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>The analogy that makes it clear</h3>
+    <p>Think of an ANN as reading a photograph — all pixels visible at once, processed layer by layer to extract features. Think of an RNN as listening to a sentence read aloud — one word at a time, each word processed in the context of everything heard so far.</p>
+
+    <div class="diagram">
+<span class="d-blue">ANN</span> — data flows <span class="d-amber">downward through depth</span> (one sample, processed once):
+<span class="d-muted">Input → [Layer 1, W₁] → [Layer 2, W₂] → [Layer 3, W₃] → Output</span>
+         W₁ ≠ W₂ ≠ W₃  (different weights per layer)
+
+<span class="d-green">RNN</span> — data flows <span class="d-amber">sideways through time</span> (sequence, processed step by step):
+<span class="d-muted">x(1) → [h(1), W] → x(2) → [h(2), W] → x(3) → [h(3), W] → Output</span>
+         ↑ same W ↑          ↑ same W ↑          ↑ same W ↑
+         <span class="d-amber">h(t) passed forward at every step — memory accumulates</span>
+    </div>
+
+    <div class="callout key">
+      <div class="callout-label">The Sharpest Distinction</div>
+      <p>In ANN, output of layer 1 feeds layer 2 <em>within the same data sample</em>. In RNN, output of step 1 feeds step 2 <em>across different points in time</em>. ANN goes deep. RNN goes through time.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 3: ARCHITECTURE -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="architecture">
+    <div class="section-num">03 — ARCHITECTURE</div>
+    <h2 class="section-title">RNN architecture — one layer per time step</h2>
+    <p class="section-subtitle">The folded and unrolled views, and what actually lives inside one RNN cell.</p>
+
+    <p>At its simplest, an RNN has <strong>exactly one hidden layer</strong>. This is the introductory case. At each time step, this single layer runs once — receiving the current input x(t) and the previous hidden state h(t-1), and producing a new hidden state h(t).</p>
+
+    <h3>The folded view — one box with a loop</h3>
+    <p>The compact way to draw an RNN is a single box with an arrow looping back into itself. That loop is not connecting to a different layer — it is the same layer, feeding its own output back as input for the next run. The loop <em>is</em> time passing.</p>
+
+    <div class="diagram">
+         <span class="d-amber">┌────────────────────────────────────┐</span>
+         <span class="d-amber">│</span>           h(t-1) loops back           <span class="d-amber">│</span>
+         <span class="d-amber">▼</span>                                        <span class="d-amber">│</span>
+ x(t) → <span class="d-blue">[ ONE LAYER: tanh(W·x + U·h + b) ]</span> → h(t) ─┘
+                         │
+                        y(t)  (output / prediction)
+    </div>
+
+    <h3>The unrolled view — time stretched out</h3>
+    <p>When you "unroll" an RNN across a sequence of length T, you draw the same box T times side by side. This makes the time dimension visible. Crucially, all T boxes share the same weights — there is only ever one layer, one W, one U, one b.</p>
+
+    <div class="diagram">
+x(1) → <span class="d-blue">[h(1)]</span> <span class="d-amber">──U──▶</span> x(2) → <span class="d-blue">[h(2)]</span> <span class="d-amber">──U──▶</span> x(3) → <span class="d-blue">[h(3)]</span> → y(3)
+         <span class="d-muted">W,U,b</span>              <span class="d-muted">W,U,b</span>              <span class="d-muted">W,U,b</span>
+<span class="d-muted">         ↑─────────────── same weights everywhere ──────────────↑</span>
+<span class="d-amber">         amber arrows = h(t) passing memory through time</span>
+    </div>
+
+    <h3>Inside one time step — the neuron equation</h3>
+    <p>Two things come into the layer at every step: the current input <code>x(t)</code> and the previous memory <code>h(t-1)</code>. Each is multiplied by its own weight matrix, added together with a bias, then squished through tanh.</p>
+
+    <div class="eq">
+      <div class="eq-label">RNN hidden state update — the core equation</div>
+<span class="eq-green">h(t)</span>  =  tanh( <span class="eq-blue">W · x(t)</span>  +  <span class="eq-amber">U · h(t-1)</span>  +  b )
+
+Where:
+  <span class="eq-blue">W</span>  =  input weight matrix   (how to process the new word/token)
+  <span class="eq-amber">U</span>  =  recurrent weight matrix  (how to use past memory)
+  <span class="eq-blue">x(t)</span>  =  current input at step t
+  <span class="eq-amber">h(t-1)</span>  =  hidden state from previous step (memory)
+  b  =  bias vector
+
+Compare to a plain ANN neuron:
+  h  =  tanh( <span class="eq-blue">W · x</span>  +  b )    <span class="c">← only ONE input</span>
+
+<span class="c">The only addition: U · h(t-1). That one extra term IS the entire memory mechanism.</span>
+    </div>
+
+    <div class="callout insight">
+      <div class="callout-label">Key Insight — W vs U</div>
+      <p><strong>W</strong> (input weight) asks: <em>"What is important about this new piece of information?"</em> — it processes x(t). <strong>U</strong> (recurrent weight) asks: <em>"What should I carry forward from what I already know?"</em> — it processes h(t-1). Two separate matrices because new input and past memory are fundamentally different types of information.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 4: DEEP RNN -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="deep-rnn">
+    <div class="section-num">04 — DEEP RNN</div>
+    <h2 class="section-title">Deep (stacked) RNN — multiple hidden layers</h2>
+    <p class="section-subtitle">Why one layer is not always enough, and how stacking works across two axes simultaneously.</p>
+
+    <p>Just as deep ANNs learn progressively more abstract features by stacking layers, <strong>deep RNNs</strong> stack multiple recurrent layers on top of each other at each time step. This is how real-world systems are built — Google's translation system used 8 stacked LSTM layers.</p>
+
+    <p>A deep RNN operates on <em>two axes simultaneously</em>:</p>
+
+    <div class="card-grid cols2">
+      <div class="card">
+        <div class="card-title">↑ Vertical (ANN-style depth)</div>
+        <div class="card-body">At each time step, layer 1 feeds layer 2 feeds layer 3. Each layer builds richer, more abstract features from the one below. <strong>Different weights per layer</strong>: W₁ ≠ W₂ ≠ W₃.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">→ Horizontal (RNN-style time)</div>
+        <div class="card-body">Each layer has its own independent memory stream flowing through time. Layer 1 passes h1(t) to h1(t+1). Layer 2 passes h2(t) to h2(t+1). <strong>Same weights across time</strong>: W1 is always W1 at every t.</div>
+      </div>
+    </div>
+
+    <div class="diagram">
+Layer 3:  <span class="d-purple">h3(1)</span> <span class="d-red">──U3──▶</span> <span class="d-purple">h3(2)</span> <span class="d-red">──U3──▶</span> <span class="d-purple">h3(3)</span> → output
+              ↑                  ↑                  ↑
+           W3,b3              W3,b3              W3,b3
+              │ (vertical)        │                  │
+Layer 2:  <span class="d-blue">h2(1)</span> <span class="d-amber">──U2──▶</span> <span class="d-blue">h2(2)</span> <span class="d-amber">──U2──▶</span> <span class="d-blue">h2(3)</span>
+              ↑                  ↑                  ↑
+           W2,b2              W2,b2              W2,b2
+              │                  │                  │
+Layer 1:  <span class="d-green">h1(1)</span> <span class="d-amber">──U1──▶</span> <span class="d-green">h1(2)</span> <span class="d-amber">──U1──▶</span> <span class="d-green">h1(3)</span>
+              ↑                  ↑                  ↑
+          x(1),W1            x(2),W1            x(3),W1
+
+<span class="d-amber">Horizontal arrows = memory streams (different colour per layer = independent)</span>
+<span class="d-muted">Vertical arrows = depth (different W at each layer)</span>
+    </div>
+
+    <h3>What each layer learns</h3>
+    <table class="compare-table">
+      <thead><tr><th>Layer</th><th>Abstracts</th><th>Memory of</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge green">Layer 1</span></td><td>Raw token features, word shapes, phonemes</td><td>Individual tokens flowing through time</td></tr>
+        <tr><td><span class="badge blue">Layer 2</span></td><td>Grammar patterns, phrase structure</td><td>Grammatical context across the sentence</td></tr>
+        <tr><td><span class="badge purple">Layer 3</span></td><td>Topic, sentiment, semantic meaning</td><td>High-level meaning of the text so far</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <div class="callout-label">The Two Weight Rules</div>
+      <p><strong>Rule 1 (across time):</strong> Same layer always uses the same weights — W1 at t=1, t=100, t=1000 is identical.<br>
+      <strong>Rule 2 (across layers):</strong> Different layers have different weights — W1 ≠ W2 ≠ W3.<br>
+      A 3-layer deep RNN has exactly 3 weight sets {W1,U1,b1}, {W2,U2,b2}, {W3,U3,b3} — each reused infinitely across time.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 5: MATH -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="math">
+    <div class="section-num">05 — MATHEMATICS</div>
+    <h2 class="section-title">The complete forward pass mathematics</h2>
+    <p class="section-subtitle">Every equation from input to prediction — with shapes and intuitions.</p>
+
+    <h3>Notation</h3>
+    <table class="compare-table">
+      <thead><tr><th>Symbol</th><th>Meaning</th><th>Shape</th></tr></thead>
+      <tbody>
+        <tr><td><code>x(t)</code></td><td>Input vector at time step t</td><td>d × 1</td></tr>
+        <tr><td><code>h(t)</code></td><td>Hidden state at time step t</td><td>n × 1</td></tr>
+        <tr><td><code>W</code></td><td>Input weight matrix</td><td>n × d</td></tr>
+        <tr><td><code>U</code></td><td>Recurrent weight matrix</td><td>n × n</td></tr>
+        <tr><td><code>b</code></td><td>Bias vector</td><td>n × 1</td></tr>
+        <tr><td><code>y(t)</code></td><td>Output / prediction at step t</td><td>V × 1</td></tr>
+        <tr><td><code>W_y</code></td><td>Output projection matrix</td><td>V × n</td></tr>
+        <tr><td><code>T</code></td><td>Sequence length</td><td>scalar</td></tr>
+        <tr><td><code>n</code></td><td>Hidden state size (hyperparameter)</td><td>scalar</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Step 1 — Hidden state update</h3>
+    <div class="eq">
+      <div class="eq-label">Equation 1 — the recurrent update (runs T times)</div>
+<span class="eq-green">h(t)</span>  =  tanh( <span class="eq-blue">W · x(t)</span>  +  <span class="eq-amber">U · h(t-1)</span>  +  b )
+
+Initialization: h(0) = <b>0</b>  (zero vector before sequence begins)
+    </div>
+
+    <h3>Step 2 — Output projection</h3>
+    <div class="eq">
+      <div class="eq-label">Equation 2 — project hidden state to vocabulary space</div>
+<span class="eq-purple">y(t)</span>  =  W_y · <span class="eq-green">h(t)</span>  +  b_y
+
+y(t) are raw scores (logits) — one number per class in vocabulary V
+    </div>
+
+    <h3>Step 3 — Softmax (convert to probabilities)</h3>
+    <div class="eq">
+      <div class="eq-label">Equation 3 — softmax normalization</div>
+<span class="eq-blue">p(k)</span>  =  e^(y_k)  /  Σⱼ e^(y_j)      for each class k ∈ {1, ..., V}
+
+Properties: all p(k) > 0,   Σ p(k) = 1   (valid probability distribution)
+
+Example with h(t) = [2, 1]:
+  e^2 = 7.389,  e^1 = 2.718,  Σ = 10.107
+  p(0) = 7.389 / 10.107 = <span class="eq-green">0.731</span>   (73.1% — correct class)
+  p(1) = 2.718 / 10.107 = <span class="eq-amber">0.269</span>   (26.9% — wrong class)
+    </div>
+
+    <h3>Step 4 — Cross-entropy loss</h3>
+    <div class="eq">
+      <div class="eq-label">Equation 4 — cross-entropy loss per step</div>
+<span class="eq-red">L(t)</span>  =  −log( p(correct class) )
+
+Total loss over sequence:  L = Σ(t=1 to T) L(t)
+
+Intuition:
+  p = 0.99  →  L = 0.010   (confident and correct — tiny loss)
+  p = 0.73  →  L = 0.313   (our example above)
+  p = 0.50  →  L = 0.693   (uncertain)
+  p = 0.01  →  L = 4.605   (totally wrong — massive penalty)
+    </div>
+
+    <h3>Step 5 — Softmax gradient (the elegant result)</h3>
+    <div class="eq">
+      <div class="eq-label">Equation 5 — gradient of loss w.r.t. logits</div>
+∂L/∂y_k  =  <span class="eq-blue">p(k)</span>  −  <span class="eq-green">1{k is correct class}</span>
+
+For correct class:   ∂L/∂y₀  =  0.731 − 1  =  <span class="eq-red">−0.269</span>   (push y₀ UP)
+For wrong class:     ∂L/∂y₁  =  0.269 − 0  =  <span class="eq-amber">+0.269</span>   (push y₁ DOWN)
+
+This residual (predicted − truth) flows back through W_y into the RNN.
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 6: SEQUENCE LENGTH -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="sequence">
+    <div class="section-num">06 — SEQUENCE LENGTH</div>
+    <h2 class="section-title">Sequence length — how T is determined</h2>
+    <p class="section-subtitle">What counts as one time step, and how to handle variable-length sequences in practice.</p>
+
+    <p>T (sequence length) is not fixed by nature — you define what one time step means. A step can be a <strong>character</strong>, a <strong>word</strong>, a <strong>subword token</strong>, an <strong>audio frame</strong>, or a <strong>video frame</strong>. T is then how many of those units are in your input.</p>
+
+    <h3>Four strategies for choosing T</h3>
+
+    <ul class="step-list">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <strong><span class="badge blue">Natural boundary</span> — end at sentence punctuation</strong>
+          T = sentence length, varies per sample (5 words → T=5, 20 words → T=20). Hidden state reset to zero between sentences. Most intuitive for NLP — translation, sentiment analysis, NER.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <strong><span class="badge green">Fixed window</span> — always T = constant (e.g. 35)</strong>
+          Regardless of sentence boundaries, slice text into fixed chunks. Hidden state carried across chunks. Used in language modelling and Truncated BPTT.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <strong><span class="badge amber">Max length + padding</span> — for GPU batching</strong>
+          Find longest sequence in batch, pad shorter ones with [PAD] tokens. A mask (1=real, 0=pad) tells the network to ignore padded positions. Necessary for efficient GPU matrix operations.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <strong><span class="badge purple">Full document</span> — T = all tokens</strong>
+          Rare with vanilla RNN due to vanishing gradients. LSTM can handle a few hundred steps. Speech recognition may process 100s of audio frames per second.
+        </div>
+      </li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="callout-label">Practical Defaults</div>
+      <p>Sentiment analysis: T = 10–50 words. Machine translation: T = 20–100 words. Language modelling (Truncated BPTT): T = 35–100. Speech recognition: T = 100–1000 frames. Beyond ~150 steps, even LSTM struggles — Transformers are the modern solution for very long contexts.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 7: TRAINING -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="training">
+    <div class="section-num">07 — TRAINING</div>
+    <h2 class="section-title">Training — forward pass, loss, BPTT</h2>
+    <p class="section-subtitle">How RNN weights are initialized, updated, and shared across time.</p>
+
+    <h3>The training loop — 7 steps</h3>
+
+    <ul class="step-list">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <strong>Initialise all weights randomly</strong>
+          W, U, b ← small random values (e.g. Xavier/Glorot initialization). h(0) ← zero vector.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <strong>Forward pass — run all T time steps with current weights (frozen)</strong>
+          Feed x(t1): compute h(1) = tanh(W·x(1) + U·h(0) + b).
+          Feed x(t2): same W and U, but now h(1) flows in as memory → h(2).
+          Feed x(t3): same W and U, h(2) flows in → h(3) → output y(3).
+          <em>Weights do NOT change between t1, t2, t3 within one pass.</em>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <strong>Compute loss L at the end of the sequence</strong>
+          Apply softmax → cross-entropy loss. The loss reflects errors across ALL time steps.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <strong>BPTT — backpropagation through time</strong>
+          Propagate gradient backwards: t=T → t=T-1 → ... → t=1. Accumulate ∂L/∂W and ∂L/∂U from every time step.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <strong>Update all weights at once</strong>
+          W ← W − η·∂L/∂W. U ← U − η·∂L/∂U. One update per full sequence.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <strong>Repeat for next training sentence</strong>
+          Same weights (now updated) applied fresh to new sequence.
+        </div>
+      </li>
+      <li>
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <strong>Repeat for many epochs</strong>
+          After thousands of sentences across many epochs, weights converge. Final weights applied identically at every time step during inference.
+        </div>
+      </li>
+    </ul>
+
+    <div class="callout key">
+      <div class="callout-label">Critical Point</div>
+      <p>Weights are <strong>frozen during the forward pass</strong> — they do not change between x(t1), x(t2), x(t3) within one sequence. Only after computing the loss for the whole sequence does backpropagation update all weights together. This is necessary because the mistake at t=T is partly caused by decisions made at t=1 — all time steps must be seen before assigning blame.</p>
+    </div>
+
+    <h3>BPTT gradient equation</h3>
+    <div class="eq">
+      <div class="eq-label">Backpropagation through time — gradient of loss w.r.t. h(t)</div>
+∂L/∂h(t)  =  ∂L/∂h(T) × ∏(k=t+1 to T)  ∂h(k)/∂h(k-1)
+
+Each factor:   ∂h(k)/∂h(k-1)  =  <span class="eq-red">tanh'(z_k)</span>  ×  <span class="eq-amber">W</span>
+
+Where tanh'(z) = 1 − tanh²(z)   ← always between 0 and 1
+
+So:   ∂L/∂h(t)  =  ∂L/∂h(T)  ×  <span class="eq-red">∏(k=t+1 to T) [ tanh'(z_k) × W ]</span>
+                                          ↑
+                             This product is the problem.
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 8: VANISHING GRADIENT -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="vanishing">
+    <div class="section-num">08 — THE CORE PROBLEM</div>
+    <h2 class="section-title">Vanishing gradient — why RNNs forget</h2>
+    <p class="section-subtitle">The mathematical reason RNNs cannot learn long-range dependencies, shown with concrete numbers.</p>
+
+    <p>After defining sequence length T and completing the forward pass, the backward pass must propagate gradients from the loss at t=T all the way back to t=1. At each step backwards, the gradient is multiplied by <code>tanh'(z) × W</code>. Both factors are typically less than 1. Multiplying many numbers less than 1 together drives the product toward zero — <em>exponentially fast</em>.</p>
+
+    <div class="callout danger">
+      <div class="callout-label">The Problem in One Line</div>
+      <p>If tanh'(z) × W ≈ 0.4 at each step, then after 6 steps: 0.4⁶ ≈ 0.004. After 50 steps: 0.4⁵⁰ ≈ 10⁻²⁰. The gradient is effectively zero — the network learns nothing from early time steps.</p>
+    </div>
+
+    <h3>Concrete example — T = 6, tracking "France"</h3>
+    <p>Sentence: <em>"I grew up in France and speak fluent ___"</em><br>
+    To predict "French", the network must remember "France" from t=4. But the gradient arriving at t=4 has already passed through t=6 and t=5 twice.</p>
+
+    <pre>Assume: W = 0.8,  tanh'(z) ≈ 0.5 (typical)
+Each backward step multiplies gradient by: 0.5 × 0.8 = <span class="r">0.4</span>
+
+t=6 (Loss):  gradient = <span class="g">1.000</span>    ← starting signal
+t=5:         gradient = 1.000 × 0.4 = <span class="b">0.400</span>
+t=4 France:  gradient = 0.400 × 0.4 = <span class="b">0.160</span>  ← "France" gets 16%
+t=3:         gradient = 0.160 × 0.4 = <span class="h">0.064</span>
+t=2:         gradient = 0.064 × 0.4 = <span class="r">0.026</span>
+t=1 "I":     gradient = 0.026 × 0.4 = <span class="r">0.010</span>  ← "I" gets 1%
+
+Weight update ΔW = learning_rate × gradient:
+  t=6: ΔW = 0.01000   ← learns strongly
+  t=4: ΔW = 0.00160   ← barely learns
+  t=1: ΔW = 0.00010   ← effectively no learning</pre>
+
+    <h3>Gradient magnitude at each step</h3>
+    <div style="margin: 1.5rem 0;">
+      <div class="grad-row">
+        <div class="grad-label">t=6 loss</div>
+        <div class="grad-track"><div class="grad-fill" style="width:100%;background:#059669;color:#6EE7B7;font-size:11px">1.000</div></div>
+        <div class="grad-val" style="color:#6EE7B7">full</div>
+      </div>
+      <div class="grad-row">
+        <div class="grad-label">t=5</div>
+        <div class="grad-track"><div class="grad-fill" style="width:40%;background:#2563EB;color:#93C5FD">0.400</div></div>
+        <div class="grad-val" style="color:#93C5FD">40%</div>
+      </div>
+      <div class="grad-row">
+        <div class="grad-label">t=4 ★France</div>
+        <div class="grad-track"><div class="grad-fill" style="width:16%;background:#2563EB;color:#93C5FD">0.160</div></div>
+        <div class="grad-val" style="color:#93C5FD">16%</div>
+      </div>
+      <div class="grad-row">
+        <div class="grad-label">t=3</div>
+        <div class="grad-track"><div class="grad-fill" style="width:6.4%;background:#D97706;color:#FDE68A">0.064</div></div>
+        <div class="grad-val" style="color:#D97706">6.4%</div>
+      </div>
+      <div class="grad-row">
+        <div class="grad-label">t=2</div>
+        <div class="grad-track"><div class="grad-fill" style="width:2.6%;background:#DC2626;color:#FCA5A5">0.026</div></div>
+        <div class="grad-val" style="color:#DC2626">2.6%</div>
+      </div>
+      <div class="grad-row">
+        <div class="grad-label">t=1 "I"</div>
+        <div class="grad-track"><div class="grad-fill" style="width:1%;background:#991B1B;color:#FCA5A5">0.010</div></div>
+        <div class="grad-val" style="color:#DC2626">1%</div>
+      </div>
+    </div>
+
+    <p>With T=50 or T=100, t=1 receives effectively zero gradient. The network cannot learn long-range dependencies — it is fundamentally limited to a memory span of ~10 steps.</p>
+
+    <div class="callout insight">
+      <div class="callout-label">Why this happens — the root cause</div>
+      <p>Gradients flow backward through the <strong>same tanh and the same W repeatedly</strong>. Unlike a deep ANN where each layer has different weights (so the product can be balanced), an RNN applies the same transformation at every step. One bad factor (tanh'×W slightly less than 1) gets raised to the power of T. At T=50, even 0.9⁵⁰ = 0.005. The multiplication compounds the shrinkage mercilessly.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 9: LSTM -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="lstm">
+    <div class="section-num">09 — THE SOLUTION</div>
+    <h2 class="section-title">LSTM — Long Short-Term Memory</h2>
+    <p class="section-subtitle">How Hochreiter & Schmidhuber (1997) solved the vanishing gradient problem with a memory highway and three learned gates.</p>
+
+    <p>LSTM replaces the single hidden state of a vanilla RNN with two parallel memory systems and three <em>gates</em> — learned mechanisms that control what to remember, what to write, and what to reveal.</p>
+
+    <h3>Two memory vectors instead of one</h3>
+    <table class="compare-table">
+      <thead><tr><th>Vector</th><th>Name</th><th>Role</th><th>Analogy</th></tr></thead>
+      <tbody>
+        <tr><td><code>C(t)</code></td><td>Cell State</td><td>Long-term memory — stable, travels across many steps with minimal distortion</td><td>Filing cabinet on a conveyor belt</td></tr>
+        <tr><td><code>h(t)</code></td><td>Hidden State</td><td>Short-term working memory — filtered, task-specific view of C(t)</td><td>Sticky note on your desk</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The three gates</h3>
+
+    <div class="callout key">
+      <div class="callout-label">The Gate Principle</div>
+      <p>Every gate is a <strong>sigmoid layer followed by element-wise multiplication</strong>. Sigmoid outputs 0 to 1 — acting as a valve. 0 = completely blocked. 1 = fully open. The network <em>learns</em> when to open and close each gate.</p>
+    </div>
+
+    <h4>🗑️ Forget Gate — what to erase</h4>
+    <div class="eq">
+<span class="eq-red">f(t)</span>  =  σ( W_f · [h(t-1); x(t)] + b_f )
+
+Output: values between 0 and 1 per memory slot
+  <span class="eq-red">f(t) = 0</span>  →  completely erase that slot in C(t-1)
+  <span class="eq-red">f(t) = 1</span>  →  keep that slot in C(t-1) unchanged
+
+Example: Reading "nurse" after "chef" — forget gate outputs ≈ 0
+for the gender slot → masculine gender of "chef" erased.
+    </div>
+
+    <h4>📥 Input Gate + Gate Gate — what to write</h4>
+    <div class="eq">
+<span class="eq-blue">i(t)</span>   =  σ( W_i · [h(t-1); x(t)] + b_i )    <span class="c">← how much to write (0 to 1)</span>
+<span class="eq-teal">g(t)</span>  =  tanh( W_g · [h(t-1); x(t)] + b_g )  <span class="c">← what to write (-1 to +1)</span>
+
+  i(t) controls the valve (sigmoid).
+  g(t) creates the actual content (tanh — can be negative or positive).
+  Together: i(t) ⊙ g(t) = new content to write, scaled by importance.
+    </div>
+
+    <h4>🛣️ Cell State Update — the memory highway</h4>
+    <div class="eq">
+<span class="eq-green">C(t)</span>  =  <span class="eq-red">f(t)</span> ⊙ C(t-1)  +  <span class="eq-blue">i(t)</span> ⊙ <span class="eq-teal">g(t)</span>
+
+  <span class="eq-red">f(t) ⊙ C(t-1)</span>   ← erase part of old memory (scale by forget gate)
+  <span class="eq-blue">i(t)</span> ⊙ <span class="eq-teal">g(t)</span>      ← write part of new content
+
+KEY: This is an ADDITION (+), not a multiplication chain.
+The gradient of C(t) w.r.t. C(t-1) = f(t) — a learned value ≈ 1.
+No repeated tanh squashing. Gradient flows back freely.
+    </div>
+
+    <h4>📤 Output Gate — what to reveal</h4>
+    <div class="eq">
+<span class="eq-purple">o(t)</span>  =  σ( W_o · [h(t-1); x(t)] + b_o )
+<span class="eq-green">h(t)</span>  =  <span class="eq-purple">o(t)</span> ⊙ tanh( C(t) )
+
+The cell state C(t) contains everything. The output gate
+selects which parts are relevant RIGHT NOW for the next prediction.
+    </div>
+
+    <h3>Why LSTM solves vanishing gradient</h3>
+    <div class="eq">
+      <div class="eq-label">Gradient through the cell state — no multiplication chain</div>
+∂L/∂C(t)  =  ∂L/∂h(t) · o(t) · (1 − tanh²(C(t)))  +  <span class="eq-green">∂C(next)</span>
+
+The <span class="eq-green">∂C(next)</span> term is ADDED — not multiplied through tanh repeatedly.
+
+Gradient back k steps:   ∂L/∂C(t)  ≈  ∂L/∂C(T) × ∏ f(k)
+
+If the network learns f(k) ≈ 1.0 for important memory:
+  1.0^50  =  1.00   ← gradient arrives at t=1 completely intact!
+  0.9^50  =  0.005  ← some decay, but manageable
+  0.4^50  ≈  0.000  ← vanilla RNN fate (tanh chain)
+    </div>
+
+    <h3>All 6 LSTM equations — complete reference</h3>
+    <div class="eq">
+      <div class="eq-label">LSTM forward pass — complete</div>
+<span class="c">z(t)  =  [h(t-1); x(t)]           concat inputs (shared by all gates)</span>
+
+<span class="eq-red">f(t)</span>  =  σ( W_f · z(t) + b_f )     FORGET gate
+<span class="eq-blue">i(t)</span>  =  σ( W_i · z(t) + b_i )     INPUT gate
+<span class="eq-teal">g(t)</span>  =  tanh( W_g · z(t) + b_g )  GATE gate (candidate content)
+<span class="eq-green">C(t)</span>  =  <span class="eq-red">f(t)</span> ⊙ C(t-1)  +  <span class="eq-blue">i(t)</span> ⊙ <span class="eq-teal">g(t)</span>  CELL STATE update
+<span class="eq-purple">o(t)</span>  =  σ( W_o · z(t) + b_o )     OUTPUT gate
+<span class="eq-green">h(t)</span>  =  <span class="eq-purple">o(t)</span> ⊙ tanh( <span class="eq-green">C(t)</span> )        HIDDEN STATE output
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 10: VARIANTS -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="variants">
+    <div class="section-num">10 — VARIANTS</div>
+    <h2 class="section-title">Variants — GRU, BiLSTM, Stacked LSTM</h2>
+    <p class="section-subtitle">How LSTM evolved and what architectures are used in practice today.</p>
+
+    <h3>GRU — Gated Recurrent Unit (Cho et al., 2014)</h3>
+    <p>Simplifies LSTM by merging cell state and hidden state, and replacing the forget + input gates with a single <em>update gate</em>.</p>
+    <div class="eq">
+<span class="eq-teal">z(t)</span>  =  σ( W_z · [h(t-1); x(t)] + b_z )    Update gate
+<span class="eq-blue">r(t)</span>  =  σ( W_r · [h(t-1); x(t)] + b_r )    Reset gate
+<span class="eq-amber">h̃(t)</span>  =  tanh( W_h · [r(t)⊙h(t-1); x(t)] + b_h )  Candidate
+<span class="eq-green">h(t)</span>  =  (1 − <span class="eq-teal">z(t)</span>) ⊙ h(t-1)  +  <span class="eq-teal">z(t)</span> ⊙ <span class="eq-amber">h̃(t)</span>     Final hidden state
+    </div>
+
+    <h3>Bidirectional LSTM</h3>
+    <p>Runs two LSTMs simultaneously — one forward (t=1 to T) and one backward (t=T to 1). Their hidden states are concatenated, giving every position access to both past and future context.</p>
+    <div class="eq">
+h(t)  =  [ <span class="eq-blue">h_forward(t)</span>  ;  <span class="eq-red">h_backward(t)</span> ]
+
+Use when: full sequence is available at inference time.
+Best for: sentiment analysis, NER, machine translation encoding.
+Cannot be used for: streaming / online prediction.
+    </div>
+
+    <h3>Architecture comparison</h3>
+    <table class="compare-table">
+      <thead><tr><th>Architecture</th><th>Gates</th><th>Params</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge blue">Vanilla RNN</span></td><td>0</td><td>Fewest</td><td>Very short sequences, simple patterns</td></tr>
+        <tr><td><span class="badge green">LSTM</span></td><td>3 (f, i, o)</td><td>Most</td><td>Long sequences, complex long-range dependencies</td></tr>
+        <tr><td><span class="badge teal" style="background:rgba(8,145,178,0.2);color:#67E8F9;border:1px solid rgba(8,145,178,0.3)">GRU</span></td><td>2 (z, r)</td><td>~25% fewer than LSTM</td><td>Speed-constrained, smaller datasets, similar quality</td></tr>
+        <tr><td><span class="badge purple">BiLSTM</span></td><td>3 × 2</td><td>2× LSTM</td><td>Tasks with full-sequence context available</td></tr>
+        <tr><td><span class="badge amber">Stacked LSTM</span></td><td>3 per layer</td><td>N × LSTM</td><td>Complex hierarchical patterns, high-capacity tasks</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 11: APPLICATIONS -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="applications">
+    <div class="section-num">11 — APPLICATIONS</div>
+    <h2 class="section-title">Real-world applications</h2>
+    <p class="section-subtitle">Where RNN and LSTM are deployed, and what architecture fits each task.</p>
+
+    <div class="card-grid cols2">
+      <div class="card">
+        <div class="card-icon">🌐</div>
+        <div class="card-title">Machine Translation</div>
+        <div class="card-body">Encoder-decoder LSTM. Encoder reads source sentence into fixed-size context vector. Decoder generates target language word by word. Google Translate used 8-layer LSTM before switching to Transformers in 2016.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎤</div>
+        <div class="card-title">Speech Recognition</div>
+        <div class="card-body">Bidirectional LSTM over Mel spectrogram frames. Still widely used in production systems. Apple Siri, Google Assistant, and Amazon Alexa all use LSTM-based acoustic models.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">✍️</div>
+        <div class="card-title">Text Generation</div>
+        <div class="card-body">Character-level or word-level LSTM predicting the next token. Can generate coherent text, code, music notation. Predecessor to modern GPT-style transformers.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">😊</div>
+        <div class="card-title">Sentiment Analysis</div>
+        <div class="card-body">BiLSTM over word embeddings, then classification head. Captures both forward context (what came before) and backward context (what comes after each word).</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📈</div>
+        <div class="card-title">Time-Series Forecasting</div>
+        <div class="card-body">LSTM over historical values, forecasting future prices, demand, sensor readings. Still dominant in many industrial forecasting applications where Transformers haven't displaced it.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏷️</div>
+        <div class="card-title">Named Entity Recognition</div>
+        <div class="card-body">BiLSTM-CRF model. BiLSTM encodes sentence context. CRF layer ensures globally consistent label sequences. State of the art before BERT (2018).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SECTION 12: SUMMARY -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="summary">
+    <div class="section-num">12 — SUMMARY</div>
+    <h2 class="section-title">Summary & the architecture lineage</h2>
+    <p class="section-subtitle">Everything in one place, and where the field went next.</p>
+
+    <h3>The complete mental model</h3>
+
+    <div class="diagram">
+<span class="d-muted">PROBLEM:</span>  Sequential data requires context from prior steps.
+            Standard ANNs have no memory — each input processed in isolation.
+
+<span class="d-muted">SOLUTION:</span> <span class="d-blue">RNN</span> — add a hidden state h(t) that carries memory through time.
+            h(t) = tanh( W·x(t) + U·h(t-1) + b )
+            Same W, U, b at every step. Weight identity across time.
+
+<span class="d-muted">PROBLEM:</span>  Gradient must flow back T steps via repeated multiplication.
+            tanh'(z) × W &lt; 1 at each step. Product → 0 exponentially.
+            Early steps get zero gradient signal. <span class="d-red">Vanishing gradient.</span>
+
+<span class="d-muted">SOLUTION:</span> <span class="d-amber">LSTM</span> — separate long-term memory C(t) from short-term h(t).
+            Cell state updated via addition: C(t) = f⊙C(t-1) + i⊙g
+            Gradient flows back through addition, not tanh chains.
+            Learned forget gate f(t) ≈ 1 keeps gradient intact.
+
+<span class="d-muted">EVOLUTION:</span>  GRU (2014) — fewer parameters, similar performance.
+             BiLSTM (2005) — process sequence in both directions.
+             Attention (2015) — look directly at all past steps.
+             <span class="d-purple">Transformer (2017)</span> — attend to everything simultaneously.
+                              No recurrence at all. Now the dominant paradigm.
+    </div>
+
+    <h3>Key equations to remember</h3>
+    <table class="compare-table">
+      <thead><tr><th>Equation</th><th>Formula</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>RNN update</td><td><code>h(t) = tanh(W·x(t) + U·h(t-1) + b)</code></td><td>Core memory mechanism</td></tr>
+        <tr><td>Softmax</td><td><code>p(k) = e^y_k / Σ e^y_j</code></td><td>Convert logits to probabilities</td></tr>
+        <tr><td>Loss</td><td><code>L = −log(p_correct)</code></td><td>Measure prediction error</td></tr>
+        <tr><td>Softmax gradient</td><td><code>∂L/∂y_k = p(k) − 1{correct}</code></td><td>Elegant residual gradient</td></tr>
+        <tr><td>LSTM cell update</td><td><code>C(t) = f⊙C(t-1) + i⊙g(t)</code></td><td>Additive memory highway</td></tr>
+        <tr><td>Vanishing condition</td><td><code>∏(tanh'·W) → 0 as T grows</code></td><td>Why RNN forgets long-range</td></tr>
+        <tr><td>LSTM gradient</td><td><code>∂C(t)/∂C(t-1) = f(t) ≈ 1</code></td><td>Why LSTM remembers</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout insight">
+      <div class="callout-label">What comes next — Transformers</div>
+      <p>LSTM solved vanishing gradients with an additive memory path. But it still compresses all history into a fixed-size vector C(t). <strong>Attention mechanisms</strong> (2015) allow the model to look directly at all previous hidden states, rather than a compressed summary. <strong>Transformers</strong> (2017) removed recurrence entirely — instead attending to all tokens simultaneously. This parallel processing made training dramatically faster and enabled scaling to billions of parameters, leading to GPT, BERT, and modern LLMs.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="text-align:center;padding:2rem 0;">
+      <p style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:0.5rem">ARCHITECTURE LINEAGE</p>
+      <p style="font-size:0.95rem;line-height:2.2">
+        <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border)">Vanilla RNN 1986</span>
+        → <span class="badge green">LSTM 1997</span>
+        → <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border)">+Forget Gate 1999</span>
+        → <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border)">+Peepholes 2000</span>
+        → <span class="badge purple">BiLSTM 2005</span>
+        → <span class="badge blue">Attention 2015</span>
+        → <span class="badge amber">GRU 2014</span>
+        → <span class="badge red">Transformer 2017</span>
+        → <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border)">GPT / BERT 2018+</span>
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div style="margin-bottom:1rem">
+    <span style="font-family:'Playfair Display',serif;font-size:1.2rem;color:#E8E4DC">Recurrent Neural Networks — A Complete Guide</span>
+  </div>
+  <p>Hochreiter & Schmidhuber (1997) · Cho et al. (2014) · Colah's Blog (2015) · W&B (2021)</p>
+  <p style="margin-top:0.5rem">Covering: RNN · Deep RNN · BPTT · Vanishing Gradient · LSTM · GRU · BiLSTM</p>
+</footer>
+
+</body>
+</html>
